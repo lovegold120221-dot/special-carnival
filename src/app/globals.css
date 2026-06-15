@@ -3530,6 +3530,35 @@ html[data-theme="dark"] .auth-logo-bg {
   color: var(--fg-ghost);
 }
 
+.auth-password-wrapper {
+  position: relative;
+  display: flex;
+}
+
+.auth-password-wrapper input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.auth-password-toggle:hover {
+  color: var(--fg);
+}
+
 .auth-error {
   font-size: 13px;
   color: #f87171;
