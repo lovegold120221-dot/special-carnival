@@ -134,7 +134,20 @@ export default function ScreenShareView({
           {isLocal && (
             <button
               className="screen-share-stop-btn"
-              onClick={() => localParticipant.setScreenShareEnabled(false)}
+              onClick={async () => {
+                for (const pub of localParticipant.videoTrackPublications.values()) {
+                  if (pub.source === Track.Source.ScreenShare && pub.track) {
+                    pub.track.stop();
+                    await localParticipant.unpublishTrack(pub.track);
+                  }
+                }
+                for (const pub of localParticipant.audioTrackPublications.values()) {
+                  if (pub.source === Track.Source.ScreenShareAudio && pub.track) {
+                    pub.track.stop();
+                    await localParticipant.unpublishTrack(pub.track);
+                  }
+                }
+              }}
             >
               Stop Sharing
             </button>

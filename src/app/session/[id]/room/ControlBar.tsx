@@ -344,7 +344,7 @@ export default function ControlBar({
 
       // Clean up when user stops sharing via browser UI
       videoTrack?.addEventListener("ended", () => {
-        localParticipant.setScreenShareEnabled(false);
+        stopShareScreen();
       });
 
       setShowShareDialog(false);
