@@ -105,21 +105,21 @@ export default function Home() {
 
   function getEmailLink() {
     const timeStr = scheduleTime ? formatScheduleTime(scheduleTime) : "Not set";
-    const subject = `Invitation: ${scheduleTitle}`;
-    const body = `You are invited to join an Orbit Meeting!\n\nTopic: ${scheduleTitle}\nTime: ${timeStr}\nJoin Link: ${scheduledLink}\n\nSee you there!`;
+    const subject = `Formal Invitation: ${scheduleTitle}`;
+    const body = `Dear Participant,\n\nYou are formally invited to attend the following virtual meeting via Orbit Meeting.\n\nMeeting Details:\n• Topic: ${scheduleTitle}\n• Date & Time: ${timeStr}\n• Meeting Link: ${scheduledLink}\n\nPlease join the session using the link provided above at the scheduled time.\n\nSincerely,\nOrbit Meeting Team`;
     return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
 
   function getGmailLink() {
     const timeStr = scheduleTime ? formatScheduleTime(scheduleTime) : "Not set";
-    const subject = `Invitation: ${scheduleTitle}`;
-    const body = `You are invited to join an Orbit Meeting!%0A%0ATopic: ${encodeURIComponent(scheduleTitle)}%0ATime: ${encodeURIComponent(timeStr)}%0AJoin Link: ${encodeURIComponent(scheduledLink)}%0A%0ASee you there!`;
-    return `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}&body=${body}`;
+    const subject = `Formal Invitation: ${scheduleTitle}`;
+    const body = `Dear Participant,\n\nYou are formally invited to attend the following virtual meeting via Orbit Meeting.\n\nMeeting Details:\n• Topic: ${scheduleTitle}\n• Date & Time: ${timeStr}\n• Meeting Link: ${scheduledLink}\n\nPlease join the session using the link provided above at the scheduled time.\n\nSincerely,\nOrbit Meeting Team`;
+    return `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
 
   function getWhatsAppLink() {
     const timeStr = scheduleTime ? formatScheduleTime(scheduleTime) : "Not set";
-    const text = `You are invited to join an Orbit Meeting!\n\nTopic: ${scheduleTitle}\nTime: ${timeStr}\nLink: ${scheduledLink}`;
+    const text = `Dear Participant,\n\nYou are formally invited to attend the following virtual meeting via Orbit Meeting.\n\nMeeting Details:\n• Topic: ${scheduleTitle}\n• Date & Time: ${timeStr}\n• Meeting Link: ${scheduledLink}\n\nPlease join the session using the link provided above at the scheduled time.\n\nSincerely,\nOrbit Meeting Team`;
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
   }
 
@@ -386,17 +386,12 @@ function CalendarIcon() {
 function MailIcon() {
   return (
     <svg
-      width="16"
-      height="16"
+      width="20"
+      height="20"
       viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      fill="currentColor"
     >
-      <rect width="20" height="16" x="2" y="4" rx="2" />
-      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+      <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
     </svg>
   );
 }
@@ -404,16 +399,12 @@ function MailIcon() {
 function WhatsAppIcon() {
   return (
     <svg
-      width="16"
-      height="16"
+      width="20"
+      height="20"
       viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      fill="currentColor"
     >
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+      <path d="M12.012 2c-5.506 0-9.988 4.482-9.988 9.988 0 1.76.456 3.474 1.32 4.98L2 22l5.166-1.356a9.92 9.92 0 0 0 4.846 1.258h.004c5.504 0 9.986-4.482 9.986-9.988C22 6.482 17.518 2 12.012 2zm5.782 14.168c-.246.696-1.428 1.374-1.968 1.464-.492.084-1.134.12-1.8.12-2.796 0-5.832-1.638-7.728-4.296-1.122-1.572-1.92-3.468-1.92-5.466 0-1.848.882-2.82 1.698-3.084.246-.084.498-.12.75-.12.246 0 .498.012.678.024.192.012.456-.072.714.54.258.624.882 2.148.96 2.304.078.156.132.336.024.54-.108.204-.204.348-.36.528-.156.18-.324.396-.462.528-.156.156-.324.324-.138.636.18.3.804 1.326 1.722 2.142.924.822 1.704 1.38 2.022 1.542.318.156.498.132.684-.084.186-.216.792-.924.996-1.236.21-.312.414-.258.696-.156.282.102 1.782.84 2.088.996.3.156.504.228.576.36.072.132.072.756-.174 1.452z" />
     </svg>
   );
 }

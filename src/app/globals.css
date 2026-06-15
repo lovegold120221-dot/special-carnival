@@ -8141,7 +8141,10 @@ html[data-theme="light"] .history-entry-translated strong {
 }
 
 .share-icon-btn svg {
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
+  display: block;
 }
 
 /* Light theme overrides */
