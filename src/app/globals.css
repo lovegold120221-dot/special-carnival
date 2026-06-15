@@ -3570,6 +3570,69 @@ html[data-theme="dark"] .auth-logo-bg {
   color: #ffffff;
 }
 
+/* ——— Time Dropdown ——— */
+.time-dropdowns {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.time-dropdown {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-inset);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 60px;
+  text-align: center;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.time-dropdown:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.time-dropdown-sep {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--fg-tertiary);
+  margin: 0 2px;
+}
+
+.time-ampm-btn {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-inset);
+  color: var(--fg-secondary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.time-ampm-btn:hover {
+  border-color: var(--accent);
+  color: var(--fg);
+}
+
+.time-ampm-btn--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
 /* ——————————————————————————————————————
    Auth Pages (login / signup / reset)
    —————————————————————————————————————— */

@@ -349,33 +349,61 @@ export default function Home() {
 
                 <div className="entry-field">
                   <span>Time</span>
-                  <TimeSpinner
-                    hour={clockHour}
-                    minute={clockMinute}
-                    ampm={clockAmPm}
-                    onHourChange={(h) => {
-                      setClockHour(h);
-                      if (scheduleTime) {
-                        const date = scheduleTime.slice(0, 10);
-                        setScheduleTime(buildTimeFromClock(date, h, clockMinute, clockAmPm));
-                      }
-                    }}
-                    onMinuteChange={(m) => {
-                      setClockMinute(m);
-                      if (scheduleTime) {
-                        const date = scheduleTime.slice(0, 10);
-                        setScheduleTime(buildTimeFromClock(date, clockHour, m, clockAmPm));
-                      }
-                    }}
-                    onAmPmToggle={() => {
-                      const newAmPm = clockAmPm === "AM" ? "PM" : "AM";
-                      setClockAmPm(newAmPm);
-                      if (scheduleTime) {
-                        const date = scheduleTime.slice(0, 10);
-                        setScheduleTime(buildTimeFromClock(date, clockHour, clockMinute, newAmPm));
-                      }
-                    }}
-                  />
+                  <div className="time-dropdowns">
+                    <select
+                      className="time-dropdown"
+                      value={clockHour}
+                      onChange={(e) => {
+                        const h = Number(e.target.value);
+                        setClockHour(h);
+                        if (scheduleTime) {
+                          const date = scheduleTime.slice(0, 10);
+                          setScheduleTime(buildTimeFromClock(date, h, clockMinute, clockAmPm));
+                        }
+                      }}
+                      aria-label="Hour"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                        <option key={h} value={h}>{String(h).padStart(2, "0")}</option>
+                      ))}
+                    </select>
+
+                    <span className="time-dropdown-sep">:</span>
+
+                    <select
+                      className="time-dropdown"
+                      value={clockMinute}
+                      onChange={(e) => {
+                        const m = Number(e.target.value);
+                        setClockMinute(m);
+                        if (scheduleTime) {
+                          const date = scheduleTime.slice(0, 10);
+                          setScheduleTime(buildTimeFromClock(date, clockHour, m, clockAmPm));
+                        }
+                      }}
+                      aria-label="Minute"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i * 5).map((m) => (
+                        <option key={m} value={m}>{String(m).padStart(2, "0")}</option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      className={`time-ampm-btn${clockAmPm === "PM" ? " time-ampm-btn--active" : ""}`}
+                      onClick={() => {
+                        const newAmPm = clockAmPm === "AM" ? "PM" : "AM";
+                        setClockAmPm(newAmPm);
+                        if (scheduleTime) {
+                          const date = scheduleTime.slice(0, 10);
+                          setScheduleTime(buildTimeFromClock(date, clockHour, clockMinute, newAmPm));
+                        }
+                      }}
+                      aria-label={`Switch to ${clockAmPm === "AM" ? "PM" : "AM"}`}
+                    >
+                      {clockAmPm}
+                    </button>
+                  </div>
                 </div>
                 <div className="schedule-link">
                   <span>{scheduledLink}</span>
