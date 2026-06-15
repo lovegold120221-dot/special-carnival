@@ -3423,6 +3423,183 @@ html[data-theme="dark"] .auth-logo-bg {
   }
 }
 
+/* ——— Clock Picker ——— */
+
+.clock-picker {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 8px 0;
+}
+
+.clock-face {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid #dce2ed;
+  background: #f8fafc;
+  box-sizing: border-box;
+}
+
+.clock-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 999px;
+  background: #2f6fed;
+  z-index: 2;
+}
+
+.clock-marker {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #4b5567;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  z-index: 1;
+  line-height: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 0;
+}
+
+.clock-marker:hover {
+  background: rgba(47, 111, 237, 0.08);
+  color: #2f6fed;
+}
+
+.clock-marker--selected {
+  background: #2f6fed !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  z-index: 3;
+}
+
+.clock-marker--minute {
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.clock-info {
+  display: grid;
+  gap: 4px;
+  min-width: 80px;
+}
+
+.clock-display {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  color: #273044;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clock-ampm-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  min-height: 24px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid #cfd7e6;
+  background: #ffffff;
+  color: #697386;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  line-height: 1;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.clock-ampm-toggle:hover {
+  border-color: #aeb9cb;
+  color: #273044;
+}
+
+.clock-ampm-toggle--active {
+  background: #2f6fed;
+  border-color: #2f6fed;
+  color: #ffffff;
+}
+
+.clock-hint {
+  font-size: 11px;
+  color: #9aa4b5;
+  line-height: 1;
+}
+
+/* Dark theme clock */
+.clock-face {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.066), rgba(255, 255, 255, 0.038));
+  border-color: var(--border-light);
+}
+
+.clock-center {
+  background: var(--accent);
+}
+
+.clock-marker {
+  color: var(--fg-secondary);
+}
+
+.clock-marker:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.clock-marker--selected {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+}
+
+.clock-display {
+  color: var(--fg);
+}
+
+.clock-ampm-toggle {
+  border-color: var(--border);
+  background: var(--surface-soft);
+  color: var(--fg-tertiary);
+}
+
+.clock-ampm-toggle:hover {
+  border-color: var(--accent-border);
+  color: var(--fg);
+}
+
+.clock-ampm-toggle--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.clock-hint {
+  color: var(--fg-tertiary);
+}
+
 /* ——————————————————————————————————————
    Auth Pages (login / signup / reset)
    —————————————————————————————————————— */

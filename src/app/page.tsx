@@ -36,6 +36,10 @@ export default function Home() {
   const [scheduleTitle, setScheduleTitle] = useState("Orbit Meeting");
   const [scheduleTime, setScheduleTime] = useState("");
   const [scheduledLink, setScheduledLink] = useState("");
+  const [clockHour, setClockHour] = useState(12);
+  const [clockMinute, setClockMinute] = useState(0);
+  const [clockAmPm, setClockAmPm] = useState<"AM" | "PM">("PM");
+  const [clockMinuteMode, setClockMinuteMode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [reminderToast, setReminderToast] = useState(false);
   const [scheduledMeetings, setScheduledMeetings] = useState<ScheduledMeeting[]>([]);
@@ -118,11 +122,38 @@ export default function Home() {
     router.push(`/session/${encodeURIComponent(meetingId)}`);
   }
 
+  function syncClockFromTime(timeStr: string) {
+    const d = new Date(timeStr);
+    if (Number.isNaN(d.getTime())) return;
+    let h = d.getHours();
+    const m = d.getMinutes();
+    setClockAmPm(h >= 12 ? "PM" : "AM");
+    h = h % 12 || 12;
+    setClockHour(h);
+    setClockMinute(Math.round(m / 5) * 5);
+    setClockMinuteMode(false);
+  }
+
+  function buildTimeFromClock(dateStr: string, hour: number, minute: number, ampm: "AM" | "PM"): string {
+    let h = hour;
+    if (ampm === "PM" && h !== 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    const d = new Date(dateStr);
+    d.setHours(h, minute, 0, 0);
+    const offset = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - offset * 60_000);
+    return local.toISOString().slice(0, 16);
+  }
+
   async function showSchedulePanel() {
     setActivePanel("schedule");
     setCopied(false);
     if (!scheduleTime) {
-      setScheduleTime(getDefaultScheduleTime());
+      const def = getDefaultScheduleTime();
+      setScheduleTime(def);
+      syncClockFromTime(def);
+    } else {
+      syncClockFromTime(scheduleTime);
     }
     if (!scheduledLink) {
       setScheduledLink(`${window.location.origin}/session/${crypto.randomUUID()}`);
@@ -304,13 +335,55 @@ export default function Home() {
                   />
                 </label>
                 <label className="entry-field">
-                  <span>Date and time</span>
+                  <span>Date</span>
                   <input
-                    type="datetime-local"
-                    value={scheduleTime}
-                    onChange={(event) => setScheduleTime(event.target.value)}
+                    type="date"
+                    value={scheduleTime ? scheduleTime.slice(0, 10) : ""}
+                    onChange={(event) => {
+                      const date = event.target.value;
+                      if (date) {
+                        const built = buildTimeFromClock(date, clockHour, clockMinute, clockAmPm);
+                        setScheduleTime(built);
+                      }
+                    }}
                   />
                 </label>
+
+                <div className="entry-field">
+                  <span>Time</span>
+                  <ClockPicker
+                    hour={clockHour}
+                    minute={clockMinute}
+                    ampm={clockAmPm}
+                    minuteMode={clockMinuteMode}
+                    onHourChange={(h) => {
+                      const newHour = h;
+                      setClockHour(newHour);
+                      setClockMinuteMode(true);
+                      if (scheduleTime) {
+                        const date = scheduleTime.slice(0, 10);
+                        setScheduleTime(buildTimeFromClock(date, newHour, clockMinute, clockAmPm));
+                      }
+                    }}
+                    onMinuteChange={(m) => {
+                      const newMin = m;
+                      setClockMinute(newMin);
+                      setClockMinuteMode(false);
+                      if (scheduleTime) {
+                        const date = scheduleTime.slice(0, 10);
+                        setScheduleTime(buildTimeFromClock(date, clockHour, newMin, clockAmPm));
+                      }
+                    }}
+                    onAmPmToggle={() => {
+                      const newAmPm = clockAmPm === "AM" ? "PM" : "AM";
+                      setClockAmPm(newAmPm);
+                      if (scheduleTime) {
+                        const date = scheduleTime.slice(0, 10);
+                        setScheduleTime(buildTimeFromClock(date, clockHour, clockMinute, newAmPm));
+                      }
+                    }}
+                  />
+                </div>
                 <div className="schedule-link">
                   <span>{scheduledLink}</span>
                 </div>
@@ -609,5 +682,99 @@ function CalendarPlusIcon() {
       <path d="M12 12v6" />
       <path d="M9 15h6" />
     </svg>
+  );
+}
+
+// ── Clock Picker Component ─────────────────────────────────────────────
+
+function ClockPicker({
+  hour,
+  minute,
+  ampm,
+  minuteMode,
+  onHourChange,
+  onMinuteChange,
+  onAmPmToggle,
+}: {
+  hour: number;
+  minute: number;
+  ampm: "AM" | "PM";
+  minuteMode: boolean;
+  onHourChange: (h: number) => void;
+  onMinuteChange: (m: number) => void;
+  onAmPmToggle: () => void;
+}) {
+  const hours = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+  const minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+
+  const displayHour = hour;
+  const displayMin = String(minute).padStart(2, "0");
+
+  return (
+    <div className="clock-picker">
+      <div className="clock-face">
+        {/* Center dot */}
+        <div className="clock-center" />
+
+        {/* Hour markers */}
+        {hours.map((h, i) => {
+          const angle = (i * 30 - 90) * (Math.PI / 180);
+          const radius = 38;
+          const cx = 50 + radius * Math.cos(angle);
+          const cy = 50 + radius * Math.sin(angle);
+          const selected = !minuteMode && h === displayHour;
+          return (
+            <button
+              key={`h-${h}`}
+              type="button"
+              className={`clock-marker${selected ? " clock-marker--selected" : ""}`}
+              style={{ left: `${cx}%`, top: `${cy}%` }}
+              onClick={() => onHourChange(h)}
+              aria-label={`${h} ${ampm.toLowerCase()}`}
+            >
+              {h}
+            </button>
+          );
+        })}
+
+        {/* Minute markers */}
+        {minutes.map((m, i) => {
+          const angle = (i * 30 - 90) * (Math.PI / 180);
+          const radius = 38;
+          const cx = 50 + radius * Math.cos(angle);
+          const cy = 50 + radius * Math.sin(angle);
+          const selected = minuteMode && m === minute;
+          return (
+            <button
+              key={`m-${m}`}
+              type="button"
+              className={`clock-marker clock-marker--minute${selected ? " clock-marker--selected" : ""}`}
+              style={{ left: `${cx}%`, top: `${cy}%` }}
+              onClick={() => onMinuteChange(m)}
+              aria-label={`${m} minutes`}
+            >
+              {String(m).padStart(2, "0")}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="clock-info">
+        <span className="clock-display">
+          {displayHour}:{displayMin}
+          <button
+            type="button"
+            className={`clock-ampm-toggle${ampm === "PM" ? " clock-ampm-toggle--active" : ""}`}
+            onClick={onAmPmToggle}
+            aria-label={`Switch to ${ampm === "AM" ? "PM" : "AM"}`}
+          >
+            {ampm}
+          </button>
+        </span>
+        <span className="clock-hint">
+          {minuteMode ? "Select minutes" : "Select hour"}
+        </span>
+      </div>
+    </div>
   );
 }
