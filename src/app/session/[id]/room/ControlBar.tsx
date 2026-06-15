@@ -185,12 +185,12 @@ export default function ControlBar({
     !!cameraTrack &&
     cameraTrack.source === Track.Source.Camera &&
     !cameraTrack.isMuted;
-  const screenShareOn = localParticipant.isScreenShareEnabled;
   const nativeScreenShare = getNativeScreenShareBridge();
   const browserScreenShareSupported =
     typeof navigator !== "undefined" &&
     Boolean(navigator.mediaDevices?.getDisplayMedia);
-  const screenShareActive = screenShareOn || customScreenShareOn;
+  const screenShareActive = customScreenShareOn || 
+    [...localParticipant.videoTrackPublications.values()].some(p => p.source === Track.Source.ScreenShare);
   const screenAudioAvailable = !nativeScreenShare;
   const canStartScreenShare = Boolean(nativeScreenShare || browserScreenShareSupported);
 
@@ -248,10 +248,21 @@ export default function ControlBar({
       await localParticipant.unpublishTrack(track);
       customScreenShareTrackRef.current = null;
       setCustomScreenShareOn(false);
+      return;
     }
 
-    if (screenShareOn) {
-      await localParticipant.setScreenShareEnabled(false);
+    // Stop all screen share tracks
+    for (const pub of localParticipant.videoTrackPublications.values()) {
+      if (pub.source === Track.Source.ScreenShare && pub.track) {
+        pub.track.stop();
+        await localParticipant.unpublishTrack(pub.track);
+      }
+    }
+    for (const pub of localParticipant.audioTrackPublications.values()) {
+      if (pub.source === Track.Source.ScreenShareAudio && pub.track) {
+        pub.track.stop();
+        await localParticipant.unpublishTrack(pub.track);
+      }
     }
   }
 
@@ -307,9 +318,35 @@ export default function ControlBar({
     }
 
     try {
-      await localParticipant.setScreenShareEnabled(true, {
+      // Use direct getDisplayMedia for more reliable screen capture
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
         audio: shareWithAudio,
       });
+
+      // Publish video track as screen share
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        await localParticipant.publishTrack(videoTrack, {
+          name: "screen",
+          source: Track.Source.ScreenShare,
+        });
+      }
+
+      // Publish audio track if captured
+      const audioTracks = stream.getAudioTracks();
+      for (const audioTrack of audioTracks) {
+        await localParticipant.publishTrack(audioTrack, {
+          name: "screen-audio",
+          source: Track.Source.ScreenShareAudio,
+        });
+      }
+
+      // Clean up when user stops sharing via browser UI
+      videoTrack?.addEventListener("ended", () => {
+        localParticipant.setScreenShareEnabled(false);
+      });
+
       setShowShareDialog(false);
     } catch (e: unknown) {
       setShareError(`Failed to start screen share: ${getShareErrorMessage(e)}`);
