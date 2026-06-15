@@ -118,39 +118,20 @@ export default function Home() {
 
   return (
     <main className="entry-shell" data-theme={theme}>
-      <aside className="entry-sidebar" aria-label="Primary">
-        <div className="entry-brand">
-          <img src="/icon-eburon.svg" alt="Eburon AI" className="entry-brand-logo" />
-          <span>Orbit Meeting</span>
-        </div>
-        <nav className="entry-nav" aria-label="Meeting sections">
-          <span className="entry-nav-item entry-nav-item--active">Home</span>
-          <span className="entry-nav-item">Meetings</span>
-          <span className="entry-nav-item">Contacts</span>
-          <span className="entry-nav-divider" role="separator" />
-          <Link href="/settings" className="entry-nav-item entry-nav-settings">
-            Settings
-          </Link>
-        </nav>
-
-        {user ? (
-          <div className="entry-auth-section">
-            <span className="entry-auth-email" title={user.email ?? ""}>{user.email}</span>
-            <button className="entry-auth-btn" onClick={() => signOut()}>Sign out</button>
-          </div>
-        ) : (
-          <div className="entry-auth-section">
-            <Link href="/auth/login" className="entry-auth-btn">Sign in</Link>
-            <Link href="/auth/signup" className="entry-auth-btn">Create account</Link>
-          </div>
-        )}
-      </aside>
 
       <section className="entry-main">
         <header className="entry-topbar">
-          <div>
-            <p className="entry-kicker">Video meetings with live translation</p>
-            <h1>Orbit Meeting</h1>
+          <div className="entry-topbar-left">
+            <div className="entry-brand">
+              <img src="/icon-eburon.svg" alt="Eburon AI" className="entry-brand-logo" />
+              <span>Orbit Meeting</span>
+            </div>
+            <nav className="entry-nav" aria-label="Meeting sections">
+              <span className="entry-nav-item entry-nav-item--active">Home</span>
+              <span className="entry-nav-item">Meetings</span>
+              <span className="entry-nav-item">Contacts</span>
+              <Link href="/settings" className="entry-nav-item entry-nav-settings">Settings</Link>
+            </nav>
           </div>
           <div className="entry-topbar-actions">
             <button
@@ -162,7 +143,17 @@ export default function Home() {
               <ThemeIcon />
               <span>{theme === "dark" ? "Light" : "Dark"}</span>
             </button>
-            <p className="entry-powered"></p>
+            {user ? (
+              <div className="entry-auth-section">
+                <span className="entry-auth-email" title={user.email ?? ""}>{user.email}</span>
+                <button className="entry-auth-btn" onClick={() => signOut()}>Sign out</button>
+              </div>
+            ) : (
+              <div className="entry-auth-section">
+                <Link href="/auth/login" className="entry-auth-btn">Sign in</Link>
+                <Link href="/auth/signup" className="entry-auth-btn">Create account</Link>
+              </div>
+            )}
           </div>
         </header>
 
