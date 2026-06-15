@@ -199,17 +199,33 @@ async function createWindow() {
   // "Not supported" in Electron (Chromium lacks native getDisplayMedia).
   mainWindow.webContents.session.setDisplayMediaRequestHandler(
     async (_request, callback) => {
+      let resolved = false;
+      const timeoutId = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          callback({});
+        }
+      }, 3000);
+
       try {
         const sources = await desktopCapturer.getSources({
           types: ["screen"],
         });
-        if (sources.length > 0) {
-          callback({ video: sources[0], audio: "loopback" });
-        } else {
-          callback({});
+        clearTimeout(timeoutId);
+        if (!resolved) {
+          resolved = true;
+          if (sources && sources.length > 0) {
+            callback({ video: sources[0], audio: "loopback" });
+          } else {
+            callback({});
+          }
         }
       } catch {
-        callback({});
+        clearTimeout(timeoutId);
+        if (!resolved) {
+          resolved = true;
+          callback({});
+        }
       }
     },
   );

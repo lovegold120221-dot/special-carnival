@@ -2241,3 +2241,17 @@ Agent starts, connects to LiveKit Cloud (`wss://eburon-meet-15gd8gwg.livekit.clo
   - Verified compilation via `npx next build`.
   - Verified Python tests via `pytest`.
 
+---
+
+## TASK-20260615-235800: Fix Screen Share Hanging in Electron
+
+### START RECORD
+- STATUS: IN_PROGRESS
+- Start time: 2026-06-15T23:58:00Z
+- User request: please fix the share screen
+- Success criteria:
+  - Add a timeout race inside the Electron main process `setDisplayMediaRequestHandler` around `desktopCapturer.getSources` to prevent screen sharing from hanging indefinitely when OS permissions are missing or blocked.
+  - Fail gracefully by returning an empty object to the callback on timeout/error, allowing the frontend to reset state and stop showing the "Starting..." indicator.
+  - Verify build compilation (`pnpm build` or `npx next build`) and run agent unit tests (`uv run pytest` in `translator/`).
+
+
