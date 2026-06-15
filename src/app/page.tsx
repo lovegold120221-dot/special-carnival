@@ -257,7 +257,9 @@ export default function Home() {
                     title="Share via Email"
                     aria-label="Share via Email"
                   >
-                    <MailIcon />
+                    <span className="share-icon-mark share-icon-mark--email" aria-hidden>
+                      <MailIcon />
+                    </span>
                     <span>Email</span>
                   </button>
                   <button
@@ -267,7 +269,9 @@ export default function Home() {
                     title="Share via Gmail"
                     aria-label="Share via Gmail"
                   >
-                    <GmailIcon />
+                    <span className="share-icon-mark share-icon-mark--gmail" aria-hidden>
+                      <GmailIcon />
+                    </span>
                     <span>Gmail</span>
                   </button>
                   <button
@@ -277,7 +281,9 @@ export default function Home() {
                     title="Share via WhatsApp"
                     aria-label="Share via WhatsApp"
                   >
-                    <WhatsAppIcon />
+                    <span className="share-icon-mark share-icon-mark--whatsapp" aria-hidden>
+                      <WhatsAppIcon />
+                    </span>
                     <span>WhatsApp</span>
                   </button>
                 </div>

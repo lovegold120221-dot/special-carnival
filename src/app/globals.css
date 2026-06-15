@@ -8093,19 +8093,22 @@ html[data-theme="light"] .history-entry-translated strong {
   margin-top: 16px;
   border-top: 1px solid var(--border-light);
   padding-top: 16px;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  justify-content: center;
+  width: 100%;
 }
 
 .share-icon-btn {
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  width: 72px;
-  height: 72px;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  min-height: 78px;
+  padding: 12px 8px 10px;
   border-radius: 12px;
   border: 1px solid var(--border-light);
   background: var(--surface-strong);
@@ -8120,6 +8123,44 @@ html[data-theme="light"] .history-entry-translated strong {
 .share-icon-btn:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow);
+}
+
+.share-icon-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin: 0 auto;
+}
+
+.share-icon-mark svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.share-icon-mark--email {
+  background: rgba(74, 144, 226, 0.12);
+  color: var(--accent);
+}
+
+.share-icon-mark--gmail {
+  background: rgba(234, 67, 53, 0.12);
+  color: #ea4335;
+}
+
+.share-icon-mark--whatsapp {
+  background: rgba(37, 211, 102, 0.12);
+  color: #25d366;
+}
+
+.share-icon-btn > span:last-child {
+  line-height: 1;
+  text-align: center;
 }
 
 .share-icon-email:hover {
@@ -8140,13 +8181,6 @@ html[data-theme="light"] .history-entry-translated strong {
   background: rgba(37, 211, 102, 0.1);
 }
 
-.share-icon-btn svg {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  display: block;
-}
-
 /* Light theme overrides */
 html[data-theme="light"] .share-icon-btn {
   background: var(--bg-inset);
@@ -8160,4 +8194,23 @@ html[data-theme="light"] .share-icon-whatsapp:hover {
   color: #128C7E;
 }
 
+@media (max-width: 480px) {
+  .invite-share-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
+  .share-icon-btn:last-child {
+    grid-column: 1 / -1;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .invite-share-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .share-icon-btn:last-child {
+    grid-column: auto;
+  }
+}

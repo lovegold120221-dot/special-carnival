@@ -26,6 +26,7 @@
 - **Share screen modal fix** — Reworked the share modal with accessible dialog semantics, inline startup/error states, unsupported-browser handling, and responsive mobile sheet styling
 - **Centered mobile share modal** — Kept the share screen modal centered on mobile and made the Android native screen-share bridge wait for the first captured frame before publishing
 - **Speed Mimicry & Multi-Speaker Transcripts** — Instructed Gemini Live agent to match speaking speed of original speakers, and parsed speaker diarization tags on the frontend for separated speaker output
+- **Schedule share icon CSS** — Normalized the Email/Gmail/WhatsApp invite tiles with a centered icon badge and consistent responsive sizing
 
 ### In Progress
 - (none)
@@ -34,6 +35,41 @@
 - (none)
 
 <!-- END ANCHORED SUMMARY -->
+
+## TASK-20260615-102559: Schedule share icon CSS
+
+### START RECORD
+- STATUS: COMPLETED
+- Start time: 2026-06-15T10:25:59Z
+- User request: Fix the CSS of the schedule meeting icons for the email, Gmail, and WhatsApp share actions.
+- Preservation constraints: Preserve the existing schedule meeting flow, invite link generation, and share intent behavior.
+- Success criteria:
+  - Email/Gmail/WhatsApp share buttons use consistent icon sizing and alignment.
+  - Icons remain centered inside their tiles across desktop and mobile widths.
+  - The invite share row keeps a clean responsive layout without duplicate CSS conflicts.
+  - Build and lint pass after the change.
+
+### TODO
+- [x] Normalize the share tile layout and icon badge sizing.
+- [x] Remove conflicting duplicate SVG size rules.
+- [x] Validate with lint and production build.
+
+### WHAT WAS DONE
+- **Icon badge layout:** Wrapped each schedule share icon in a fixed circular badge so the Email, Gmail, and WhatsApp marks align consistently.
+- **CSS cleanup:** Removed the duplicate `share-icon-btn svg` override that was causing sizing conflicts and replaced it with a single badge-based rule set.
+- **Responsive fit:** Kept the three-column desktop layout and preserved the mobile fallback behavior.
+
+### FINAL REPORT
+- STATUS: COMPLETED
+- End time: 2026-06-15T10:25:59Z
+- Files changed by this task:
+  - `src/app/page.tsx` — Wrapped schedule share icons in fixed-size badge spans
+  - `src/app/globals.css` — Added icon badge styling and removed conflicting SVG sizing rules
+  - `TASK.md` — Task ledger
+- Validation performed:
+  - `git diff --check` — Passed
+  - `pnpm exec eslint src/app/page.tsx` — Passed
+  - `pnpm build` — Passed, 17 app routes built successfully
 
 ## TASK-20260615-083841: Center mobile share screen modal
 
@@ -2204,5 +2240,4 @@ Agent starts, connects to LiveKit Cloud (`wss://eburon-meet-15gd8gwg.livekit.clo
 - Validation performed:
   - Verified compilation via `npx next build`.
   - Verified Python tests via `pytest`.
-
 
