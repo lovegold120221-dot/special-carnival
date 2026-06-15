@@ -30,10 +30,12 @@ LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = ''
 AS $$
 BEGIN
-  INSERT INTO public.profiles (id, name)
+  INSERT INTO public.profiles (id, name, email, phone)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data ->> 'name', '')
+    COALESCE(NEW.raw_user_meta_data ->> 'name', ''),
+    NEW.email,
+    NEW.phone
   );
   RETURN NEW;
 END;
@@ -95,6 +97,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   translate_audio_playback BOOLEAN DEFAULT true,
   recording_save_path TEXT DEFAULT '',
   recording_auto_start BOOLEAN DEFAULT false,
+  email TEXT,
+  phone TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -208,9 +212,10 @@ ALTER TABLE public.translation_history ENABLE ROW LEVEL SECURITY;
 -- ═════════════════════════════════════════════════════════════════════════
 
 DROP POLICY IF EXISTS profiles_select_own ON public.profiles;
-CREATE POLICY profiles_select_own
+DROP POLICY IF EXISTS profiles_select_all ON public.profiles;
+CREATE POLICY profiles_select_all
   ON public.profiles FOR SELECT
-  USING (auth.uid() = id);
+  USING (true);
 
 DROP POLICY IF EXISTS profiles_insert_own ON public.profiles;
 CREATE POLICY profiles_insert_own

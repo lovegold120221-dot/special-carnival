@@ -36,6 +36,7 @@ export default function SettingsPage() {
 
   // Local form state
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [theme, setTheme] = useState<ThemePreference>("system");
   const [defaultLanguage, setDefaultLanguage] = useState("en");
   const [contentType, setContentType] = useState<"normal" | "movie" | "cinematic_faithful">("normal");
@@ -71,6 +72,7 @@ export default function SettingsPage() {
         setGlossary(profile.glossary ?? []);
         setRecordingSavePath(profile.recording_save_path ?? "");
         setRecordingAutoStart(profile.recording_auto_start ?? false);
+        setPhone(profile.phone || "");
       }, 0);
       return () => clearTimeout(t);
     }
@@ -100,6 +102,7 @@ export default function SettingsPage() {
       glossary,
       recording_save_path: recordingSavePath,
       recording_auto_start: recordingAutoStart,
+      phone,
     });
     setSaving(false);
     setDirty(false);
@@ -178,9 +181,28 @@ export default function SettingsPage() {
                     maxLength={40}
                   />
                 </div>
+                <div className="settings-field">
+                  <label className="settings-label">Email Address</label>
+                  <input
+                    className="settings-input"
+                    value={profile?.email || ""}
+                    disabled
+                    placeholder="Not authenticated"
+                  />
+                  <p className="settings-hint">Your registered account email address.</p>
+                </div>
 
-
-
+                <div className="settings-field">
+                  <label className="settings-label">Phone Number</label>
+                  <input
+                    className="settings-input"
+                    value={phone}
+                    onChange={(e) => { setPhone(e.target.value); markDirty(); }}
+                    placeholder="e.g. +1234567890"
+                    maxLength={20}
+                  />
+                  <p className="settings-hint">Used to receive meeting invites via WhatsApp.</p>
+                </div>
                 <div className="settings-field">
                   <label className="settings-label">Language</label>
                   <select

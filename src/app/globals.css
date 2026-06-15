@@ -8086,3 +8086,192 @@ html[data-theme="light"] .history-entry-translated strong {
     grid-template-columns: 1fr;
   }
 }
+
+/* ——— Schedule Meeting Invitation UI ——— */
+.invite-participants-section {
+  margin-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 16px;
+}
+
+.invite-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 8px;
+}
+
+.participant-select-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.custom-participant-toggle-btn {
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--fg-secondary);
+  font-size: 12px;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.custom-participant-toggle-btn:hover {
+  border-color: var(--accent);
+  color: var(--fg);
+}
+
+.custom-participant-form {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.custom-participant-form-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-secondary);
+  margin-bottom: 2px;
+}
+
+.custom-participant-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+@media (min-width: 480px) {
+  .custom-participant-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.custom-participant-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-end;
+  transition: opacity 0.2s;
+}
+
+.custom-participant-btn:hover {
+  opacity: 0.9;
+}
+
+.participants-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  margin-bottom: 16px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.participant-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  gap: 8px;
+}
+
+.participant-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.participant-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.participant-meta {
+  font-size: 11px;
+  color: var(--fg-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.participant-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.invite-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border-light);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.invite-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg);
+}
+
+.invite-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.invite-btn-whatsapp:hover:not(:disabled) {
+  border-color: #25d366;
+  background: rgba(37, 211, 102, 0.1);
+  color: #25d366;
+}
+
+.invite-btn-email:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--accent);
+}
+
+.invite-btn-remove:hover:not(:disabled) {
+  border-color: var(--error);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+}
+

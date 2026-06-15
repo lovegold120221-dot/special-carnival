@@ -36,6 +36,8 @@ export type UserProfile = {
   // Recording
   recording_save_path?: string;
   recording_auto_start?: boolean;
+  email?: string;
+  phone?: string;
 };
 
 type UserContextType = {
@@ -66,6 +68,8 @@ const DEFAULT_PROFILE: UserProfile = {
   glossary: [],
   recording_save_path: "",
   recording_auto_start: false,
+  email: "",
+  phone: "",
 };
 
 function normalizeThemePreference(theme: unknown): ThemePreference {
@@ -152,6 +156,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           const loadedProfile = {
             ...DEFAULT_PROFILE,
             ...data,
+            email: user.email || data.email || "",
+            phone: user.phone || data.phone || "",
             theme: normalizeThemePreference(data.theme),
           };
           setProfile(loadedProfile);
@@ -159,7 +165,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         } else {
           // Profile should have been auto-created by the DB trigger,
           // but just in case, create it now
-          const newProfile: UserProfile = { ...DEFAULT_PROFILE, id: user.id, name: user.user_metadata?.name || "" };
+          const newProfile: UserProfile = {
+            ...DEFAULT_PROFILE,
+            id: user.id,
+            name: user.user_metadata?.name || "",
+            email: user.email || "",
+            phone: user.phone || "",
+          };
           setProfile(newProfile);
           applyThemePreference(newProfile.theme);
           try {
