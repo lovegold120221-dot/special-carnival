@@ -8153,6 +8153,132 @@ html[data-theme="light"] .history-entry-translated strong {
   opacity: 1;
 }
 
+/* ——— Invite Dialog ——— */
+
+.invite-dialog-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+
+.invite-dialog-link {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-secondary);
+}
+
+.invite-dialog-copy {
+  flex-shrink: 0;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+
+.invite-dialog-copy:hover {
+  background: var(--accent-strong);
+}
+
+.invite-dialog-share {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.invite-share-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 76px;
+  padding: 12px 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: var(--surface-strong);
+  color: var(--fg-secondary);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.invite-share-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.invite-share-btn svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.invite-share-btn span {
+  line-height: 1;
+}
+
+.invite-share-email {
+  color: var(--accent);
+}
+
+.invite-share-email:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.invite-share-gmail {
+  color: #ea4335;
+}
+
+.invite-share-gmail:hover {
+  border-color: #ea4335;
+  background: rgba(234, 67, 53, 0.1);
+}
+
+.invite-share-whatsapp {
+  color: #25d366;
+}
+
+.invite-share-whatsapp:hover {
+  border-color: #25d366;
+  background: rgba(37, 211, 102, 0.1);
+}
+
+/* Light theme overrides for invite dialog */
+html[data-theme="light"] .invite-share-btn {
+  background: var(--bg-inset);
+}
+
+html[data-theme="light"] .invite-share-gmail:hover {
+  color: #d93025;
+}
+
+html[data-theme="light"] .invite-share-whatsapp:hover {
+  color: #128C7E;
+}
+
 @keyframes modal-in {
   from {
     opacity: 0;

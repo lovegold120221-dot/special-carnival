@@ -25,7 +25,7 @@ import {
   BreakoutRoomsIcon,
   SettingsIcon,
   HistoryIcon,
-  LinkIcon,
+  InviteIcon,
   CaretUpIcon,
   HandRaiseIcon,
 } from "./icons";
@@ -129,7 +129,8 @@ export default function ControlBar({
   const customScreenShareTrackRef = useRef<MediaStreamTrack | null>(null);
   const [customScreenShareOn, setCustomScreenShareOn] = useState(false);
   const shareConfirmButtonRef = useRef<HTMLButtonElement | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -149,11 +150,34 @@ export default function ControlBar({
     localParticipant.publishData(data, { topic: "react", reliable: true });
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const openInvite = () => {
+    setShowInviteDialog(true);
+    setShowMoreMenu(false);
+    setShowReactions(false);
   };
+
+  const copyMeetingLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setInviteCopied(true);
+    setTimeout(() => setInviteCopied(false), 2000);
+  };
+
+  function getEmailLink() {
+    const subject = `Join my Orbit Meeting`;
+    const body = `You are invited to join my Orbit Meeting!\n\nMeeting Link: ${window.location.href}\n\nSee you there!`;
+    return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+
+  function getGmailLink() {
+    const subject = `Join my Orbit Meeting`;
+    const body = `You are invited to join my Orbit Meeting!\n\nMeeting Link: ${window.location.href}\n\nSee you there!`;
+    return `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+
+  function getWhatsAppLink() {
+    const text = `You are invited to join my Orbit Meeting!\n\nMeeting Link: ${window.location.href}`;
+    return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+  }
 
   const micOn = !!microphoneTrack && !microphoneTrack.isMuted;
   const camOn =
@@ -474,10 +498,10 @@ export default function ControlBar({
           dataMobile="overflow"
         />
         <CtrlButton
-          active={copied}
-          onClick={handleCopyLink}
-          label={copied ? "Copied" : "Link"}
-          icon={<LinkIcon />}
+          active={showInviteDialog}
+          onClick={openInvite}
+          label="Invite"
+          icon={<InviteIcon />}
           dataMobile="overflow"
         />
         <CtrlButton
@@ -551,8 +575,8 @@ export default function ControlBar({
               <button className="mobile-more-item" onClick={() => { onToggleSpeaker(); setShowMoreMenu(false); }}>
                 {speakerMuted ? <SpeakerOffIcon /> : <SpeakerIcon />} <span>Speaker</span>
               </button>
-              <button className="mobile-more-item" onClick={() => { handleCopyLink(); setShowMoreMenu(false); }}>
-                <LinkIcon /> <span>{copied ? "Copied" : "Link"}</span>
+              <button className="mobile-more-item" onClick={() => { openInvite(); }}>
+                <InviteIcon /> <span>Invite</span>
               </button>
               <button className="mobile-more-item" onClick={() => { router.push("/settings"); setShowMoreMenu(false); }}>
                 <SettingsIcon /> <span>Settings</span>
@@ -574,6 +598,88 @@ export default function ControlBar({
             </button>
           ))}
         </div>
+      )}
+
+      {/* ——— Invite Dialog ——— */}
+      {showInviteDialog && mounted && createPortal(
+        <div
+          className="share-dialog-overlay"
+          onClick={() => setShowInviteDialog(false)}
+        >
+          <section
+            className="share-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="invite-dialog-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="share-dialog-header">
+              <span className="share-dialog-icon" aria-hidden>
+                <InviteIcon />
+              </span>
+              <div>
+                <h3 className="share-dialog-title" id="invite-dialog-title">Invite people</h3>
+                <p className="share-dialog-desc">
+                  Share the meeting link to invite others.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="share-dialog-close"
+                onClick={() => setShowInviteDialog(false)}
+                aria-label="Close invite dialog"
+              >
+                <span aria-hidden>×</span>
+              </button>
+            </div>
+
+            <div className="invite-dialog-bar">
+              <span className="invite-dialog-link">{window.location.href}</span>
+              <button
+                type="button"
+                className="invite-dialog-copy"
+                onClick={copyMeetingLink}
+                aria-label={inviteCopied ? "Copied" : "Copy meeting link"}
+              >
+                {inviteCopied ? "Copied" : "Copy"}
+              </button>
+            </div>
+
+            <div className="invite-dialog-share">
+              <button
+                type="button"
+                className="invite-share-btn invite-share-email"
+                onClick={() => { window.location.href = getEmailLink(); }}
+                title="Share via Email"
+                aria-label="Share via Email"
+              >
+                <MailIcon />
+                <span>Email</span>
+              </button>
+              <button
+                type="button"
+                className="invite-share-btn invite-share-gmail"
+                onClick={() => { window.open(getGmailLink(), "_blank", "noopener,noreferrer"); }}
+                title="Share via Gmail"
+                aria-label="Share via Gmail"
+              >
+                <GmailIcon />
+                <span>Gmail</span>
+              </button>
+              <button
+                type="button"
+                className="invite-share-btn invite-share-whatsapp"
+                onClick={() => { window.open(getWhatsAppLink(), "_blank", "noopener,noreferrer"); }}
+                title="Share via WhatsApp"
+                aria-label="Share via WhatsApp"
+              >
+                <WhatsAppIcon />
+                <span>WhatsApp</span>
+              </button>
+            </div>
+          </section>
+        </div>,
+        document.body
       )}
 
       {/* ——— Share Screen Dialog ——— */}
@@ -702,6 +808,30 @@ function MicButton({
         className="mic-btn"
       />
     </div>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+    </svg>
+  );
+}
+
+function GmailIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
+    </svg>
+  );
+}
+
+function WhatsAppIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12.012 2c-5.506 0-9.988 4.482-9.988 9.988 0 1.76.456 3.474 1.32 4.98L2 22l5.166-1.356a9.92 9.92 0 0 0 4.846 1.258h.004c5.504 0 9.986-4.482 9.986-9.988C22 6.482 17.518 2 12.012 2zm5.782 14.168c-.246.696-1.428 1.374-1.968 1.464-.492.084-1.134.12-1.8.12-2.796 0-5.832-1.638-7.728-4.296-1.122-1.572-1.92-3.468-1.92-5.466 0-1.848.882-2.82 1.698-3.084.246-.084.498-.12.75-.12.246 0 .498.012.678.024.192.012.456-.072.714.54.258.624.882 2.148.96 2.304.078.156.132.336.024.54-.108.204-.204.348-.36.528-.156.18-.324.396-.462.528-.156.156-.324.324-.138.636.18.3.804 1.326 1.722 2.142.924.822 1.704 1.38 2.022 1.542.318.156.498.132.684-.084.186-.216.792-.924.996-1.236.21-.312.414-.258.696-.156.282.102 1.782.84 2.088.996.3.156.504.228.576.36.072.132.072.756-.174 1.452z" />
+    </svg>
   );
 }
 
