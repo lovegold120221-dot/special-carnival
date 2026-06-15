@@ -30,6 +30,49 @@ self.addEventListener("activate", (event) => {
   return self.clients.claim();
 });
 
+// ── Message handler (reminders from client) ──────────────────────────────
+self.addEventListener("message", (event) => {
+  if (!event.data || event.data.type !== "orbit-show-notification") return;
+  const { title, body, link, tag } = event.data.payload || {};
+  if (!title || !body || !link) return;
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      tag: tag || "orbit-reminder",
+      icon: "/icon.svg",
+      badge: "/icon.svg",
+      data: { link },
+      requireInteraction: true, // stay visible until user clicks
+      vibrate: [200, 100, 200],
+    }),
+  );
+});
+
+// ── Notification click handler ────────────────────────────────────────────
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const link = event.notification.data?.link;
+  if (!link) return;
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        // Focus an existing tab if possible
+        for (const client of clients) {
+          if (client.url === link && "focus" in client) {
+            return client.focus();
+          }
+        }
+        // Open new tab
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(link);
+        }
+      }),
+  );
+});
+
 // Fetch handler: network-first for all requests, fallback to cache
 self.addEventListener("fetch", (event) => {
   const { request } = event;

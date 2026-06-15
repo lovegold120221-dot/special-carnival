@@ -6,6 +6,22 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
+import type { ScheduledMeeting } from "@/lib/reminder";
+import {
+  getScheduledMeetings,
+  saveScheduledMeeting,
+  getNextMeeting,
+  getUpcomingMeetings,
+  getMinutesUntilMeeting,
+  formatMeetingTime,
+  formatCountdown,
+  scheduleMeetingReminder,
+  rescheduleAllReminders,
+  requestNotificationPermission,
+  showBrowserNotification,
+  downloadIcsFile,
+  clearPastMeetings,
+} from "@/lib/reminder";
 
 type ActivePanel = "join" | "schedule";
 
@@ -21,6 +37,10 @@ export default function Home() {
   const [scheduleTime, setScheduleTime] = useState("");
   const [scheduledLink, setScheduledLink] = useState("");
   const [copied, setCopied] = useState(false);
+  const [reminderToast, setReminderToast] = useState(false);
+  const [scheduledMeetings, setScheduledMeetings] = useState<ScheduledMeeting[]>([]);
+  const [nextMeeting, setNextMeeting] = useState<ScheduledMeeting | null>(null);
+  const [minutesUntil, setMinutesUntil] = useState(0);
   const { profile } = useUser();
   const theme = profile?.theme || "system";
   const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
@@ -34,6 +54,19 @@ export default function Home() {
       router.replace("/auth/login");
     }
   }, [redirectingToAuth, router]);
+
+  // Load scheduled meetings and reschedule reminders on mount
+  useEffect(() => {
+    refreshMeetings();
+    rescheduleAllReminders();
+
+    // Refresh countdown every 30s
+    const interval = setInterval(() => {
+      refreshMeetings();
+    }, 30_000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Show nothing while auth state is loading or redirecting.
   if (waitingForAuth) {
@@ -101,6 +134,46 @@ export default function Home() {
     await navigator.clipboard.writeText(scheduledLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  // Save meeting + request notification permission + schedule reminder
+  async function saveAndRemind() {
+    if (!scheduledLink || !scheduleTime) return;
+
+    const meeting: ScheduledMeeting = {
+      id: scheduledLink.split("/").pop() || crypto.randomUUID(),
+      title: scheduleTitle,
+      scheduledAt: new Date(scheduleTime).toISOString(),
+      link: scheduledLink,
+      createdAt: new Date().toISOString(),
+      reminded: [],
+    };
+
+    saveScheduledMeeting(meeting);
+    refreshMeetings();
+
+    // Request notification permission
+    const granted = await requestNotificationPermission();
+    if (granted) {
+      showBrowserNotification(
+        "Reminder Set",
+        `You'll be notified before "${meeting.title}"`,
+        meeting.link,
+      );
+    }
+
+    setReminderToast(true);
+    setTimeout(() => setReminderToast(false), 4000);
+  }
+
+  function refreshMeetings() {
+    clearPastMeetings();
+    setScheduledMeetings(getUpcomingMeetings(48));
+    const next = getNextMeeting();
+    setNextMeeting(next);
+    if (next) {
+      setMinutesUntil(getMinutesUntilMeeting(next));
+    }
   }
 
   function getEmailLink() {
@@ -253,7 +326,10 @@ export default function Home() {
                   <button
                     type="button"
                     className="share-icon-btn share-icon-email"
-                    onClick={() => { window.location.href = getEmailLink(); }}
+                    onClick={() => {
+                      saveAndRemind();
+                      window.location.href = getEmailLink();
+                    }}
                     title="Share via Email"
                     aria-label="Share via Email"
                   >
@@ -265,7 +341,10 @@ export default function Home() {
                   <button
                     type="button"
                     className="share-icon-btn share-icon-gmail"
-                    onClick={() => { window.open(getGmailLink(), "_blank", "noopener,noreferrer"); }}
+                    onClick={() => {
+                      saveAndRemind();
+                      window.open(getGmailLink(), "_blank", "noopener,noreferrer");
+                    }}
                     title="Share via Gmail"
                     aria-label="Share via Gmail"
                   >
@@ -277,7 +356,10 @@ export default function Home() {
                   <button
                     type="button"
                     className="share-icon-btn share-icon-whatsapp"
-                    onClick={() => { window.open(getWhatsAppLink(), "_blank", "noopener,noreferrer"); }}
+                    onClick={() => {
+                      saveAndRemind();
+                      window.open(getWhatsAppLink(), "_blank", "noopener,noreferrer");
+                    }}
                     title="Share via WhatsApp"
                     aria-label="Share via WhatsApp"
                   >
@@ -287,6 +369,35 @@ export default function Home() {
                     <span>WhatsApp</span>
                   </button>
                 </div>
+
+                {reminderToast && (
+                  <div className="reminder-toast">
+                    <span className="reminder-toast-icon">🔔</span>
+                    <div>
+                      <strong>Reminder set</strong>
+                      <span>You'll get a notification 15 minutes before.</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="ics-download-btn"
+                      onClick={() => {
+                        const meeting: ScheduledMeeting = {
+                          id: scheduledLink?.split("/").pop() || crypto.randomUUID(),
+                          title: scheduleTitle,
+                          scheduledAt: new Date(scheduleTime).toISOString(),
+                          link: scheduledLink || "",
+                          createdAt: new Date().toISOString(),
+                          reminded: [],
+                        };
+                        downloadIcsFile(meeting);
+                      }}
+                      title="Add to Calendar"
+                      aria-label="Download calendar event"
+                    >
+                      <CalendarPlusIcon />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -294,14 +405,65 @@ export default function Home() {
 
         <section className="entry-upcoming" aria-label="Upcoming meeting">
           <div>
-            <p className="entry-panel-eyebrow">Next up</p>
-            <h2>{activePanel === "schedule" ? scheduleTitle : "Ready when you are"}</h2>
+            <p className="entry-panel-eyebrow">
+              {nextMeeting ? "Next up" : "Next up"}
+            </p>
+            {nextMeeting ? (
+              <>
+                <h2>{nextMeeting.title}</h2>
+                <p className="entry-upcoming-time">
+                  {formatMeetingTime(nextMeeting.scheduledAt)}
+                  {" · "}
+                  <strong>{formatCountdown(minutesUntil)}</strong>
+                </p>
+                <div className="entry-upcoming-actions">
+                  <Link
+                    href={nextMeeting.link}
+                    className="entry-upcoming-join"
+                  >
+                    Join
+                  </Link>
+                  <button
+                    type="button"
+                    className="entry-upcoming-ics"
+                    onClick={() => downloadIcsFile(nextMeeting)}
+                    title="Add to Calendar"
+                    aria-label="Download calendar event"
+                  >
+                    <CalendarPlusIcon />
+                  </button>
+                </div>
+              </>
+            ) : activePanel === "schedule" && scheduleTime ? (
+              <>
+                <h2>{scheduleTitle}</h2>
+                <p className="entry-upcoming-time">
+                  {formatScheduleTime(scheduleTime)}
+                </p>
+              </>
+            ) : (
+              <>
+                <h2>Ready when you are</h2>
+                <p className="entry-upcoming-time">
+                  Create a room now or join with an invite link.
+                </p>
+              </>
+            )}
           </div>
-          <p>
-            {activePanel === "schedule" && scheduleTime
-              ? formatScheduleTime(scheduleTime)
-              : "Create a room now or join with an invite link."}
-          </p>
+
+          {scheduledMeetings.length > 1 && (
+            <div className="entry-upcoming-list">
+              <p className="entry-upcoming-list-label">All scheduled</p>
+              {scheduledMeetings.map((m) => (
+                <div key={m.id} className="entry-upcoming-list-item">
+                  <span className="entry-upcoming-list-title">{m.title}</span>
+                  <span className="entry-upcoming-list-time">
+                    {formatMeetingTime(m.scheduledAt)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </section>
     </main>
@@ -424,6 +586,28 @@ function GmailIcon() {
       fill="currentColor"
     >
       <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
+    </svg>
+  );
+}
+
+function CalendarPlusIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M7 10v-2" />
+      <path d="M17 10v-2" />
+      <path d="M3 6h18" />
+      <path d="M12 12v6" />
+      <path d="M9 15h6" />
     </svg>
   );
 }
