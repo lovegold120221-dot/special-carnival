@@ -3481,6 +3481,7 @@ html[data-theme="dark"] .auth-logo-bg {
   color: #273044;
   line-height: 1;
   cursor: default;
+  -webkit-user-select: none;
   user-select: none;
 }
 
