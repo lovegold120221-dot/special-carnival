@@ -25,6 +25,8 @@ TRANSLATION_TRACK_KIND = "translation"
 
 # Max transcript entries kept in rolling context for session memory.
 MAX_TRANSCRIPT_HISTORY = 30
+# Max structured segments kept in rolling context.
+MAX_HISTORY_SEGMENTS = 20
 # Max words across all history entries before oldest are dropped.
 MAX_HISTORY_WORDS = 600
 

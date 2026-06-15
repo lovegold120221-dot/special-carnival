@@ -16,6 +16,7 @@ import contextlib
 import json
 import logging
 import random
+import re
 
 import websockets
 from livekit import rtc
@@ -29,8 +30,8 @@ from config import (
     GEMINI_MAX_FAILURES_BEFORE_LONG_BACKOFF,
     GEMINI_MODEL,
     GEMINI_RECONNECT_BACKOFF_SEC,
+    MAX_HISTORY_SEGMENTS,
     MAX_HISTORY_WORDS,
-    MAX_TRANSCRIPT_HISTORY,
     NATIVE_LANG,
     PARTICIPANT_LANG_ATTR,
 )
@@ -43,6 +44,18 @@ GEMINI_WS_URL = (
     "wss://generativelanguage.googleapis.com/ws/"
     "google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
 )
+
+# --- Structured transcription markers ---
+# Gemini wraps each transcription segment in these markers carrying JSON metadata.
+SEGMENT_RE = re.compile(r"\[SEGMENT\](.*?)\[/SEGMENT\]", re.DOTALL)
+OUTPUT_RE = re.compile(r"\[OUTPUT\](.*?)\[/OUTPUT\]", re.DOTALL)
+
+
+def _new_conversation_id() -> str:
+    """Generate a unique conversation ID for this session."""
+    import uuid
+
+    return uuid.uuid4().hex[:12]
 
 
 class GeminiSession:
@@ -120,9 +133,17 @@ class GeminiSession:
         self._consecutive_failures = 0
         self._tasks: list[asyncio.Task] = []
         self._closed = asyncio.Event()
-        # Rolling translation memory: list of (kind, text) tuples where
-        # kind is "source" or "target". Used to re-inject context on reconnect.
-        self._transcript_history: list[tuple[str, str]] = []
+        # Conversation ID for correlating transcription/translation segments.
+        self._conversation_id: str = _new_conversation_id()
+        # Rolling structured segment memory: list of segment dicts.
+        # Each segment carries: speaker_id, speaker_label, text, language,
+        # confidence, tone, emotion, speech_style, overlap_status, etc.
+        self._segment_history: list[dict] = []
+        # Track active speakers for continuity.
+        self._active_speakers: dict[str, str] = {}  # speaker_label -> speaker_id
+        self._speaker_counter: int = 0
+        # Accumulated segments for structured JSON publishing at turn end.
+        self._pending_segments: list[dict] = []
 
     # --- Public API ---------------------------------------------------------
 
@@ -459,6 +480,32 @@ class GeminiSession:
             "matching the same assignment. The translated text captions must "
             "show \u201c[A] translated text\u201d, \u201c[B] translated text\u201d "
             "so the listener sees who is speaking in their own language.\n\n"
+            "STRUCTURED TRANSLATION OUTPUT \u2014 ATTACH METADATA:\n"
+            "For EVERY output transcription segment (the translated text), "
+            "you MUST wrap it in a structured JSON marker like this:\n"
+            '[OUTPUT]{"speaker_id":"speaker_1","speaker_label":"A",'
+            '"translated_text":"the fluent natural translation",'
+            '"confidence":0.92,'
+            '"nuance_notes":"brief explanation of tone or context choices made"}'
+            "[/OUTPUT]\n"
+            "Rules:\n"
+            "  \u2022 ALWAYS wrap the translated text in [OUTPUT]...[/OUTPUT] "
+            "markers with the JSON metadata.\n"
+            "  \u2022 speaker_id and speaker_label must match the source "
+            "segment\u2019s assignment for the same speaker.\n"
+            "  \u2022 translated_text: the fluent, natural, meaning-based "
+            "translation in the target language.\n"
+            "  \u2022 confidence: your confidence in the translation accuracy "
+            "(0.0 to 1.0).\n"
+            "  \u2022 nuance_notes: a SHORT phrase explaining the key nuance "
+            "choice, e.g. \u201cpreserved sarcastic tone\u201d, "
+            "\u201cadapted idiom to local equivalent\u201d, "
+            "\u201cmaintained formal register\u201d, "
+            "\u201cpreserved emotional weight\u201d, "
+            "\u201ckept hesitant delivery\u201d. Omit if straightforward.\n"
+            "  \u2022 The plain text portion (outside markers) should contain "
+            "just the translated text with speaker tag for backward "
+            "compatibility, e.g.: \u201c[A] Translated text here\u201d\n\n"
             "AVAILABLE VOICE POOL:\n" + self._voice_pool_text() + "\n"
             f"You MUST translate the input into the language with code "
             f"'{self._target_lang}'. All output audio and text must be in "
@@ -498,6 +545,53 @@ class GeminiSession:
             "how it was said.\n"
             "8. Accurate language detection is essential. The source speaker\u2019s "
             "language may change at any time."
+            "\n\n"
+            "STRUCTURED SEGMENT OUTPUT \u2014 CRITICAL FORMAT:\n"
+            "For EVERY transcription segment you output, you MUST wrap it in "
+            "a structured JSON marker like this:\n"
+            '[SEGMENT]{"speaker_id":"speaker_1","speaker_label":"A",'
+            '"text":"the exact words spoken",'
+            '"language":"en","confidence":0.95,'
+            '"tone":"calm","emotion":"neutral",'
+            '"speech_style":"casual","overlap_status":"none",'
+            '"active_speaker":true}[/SEGMENT]\n'
+            "Rules:\n"
+            "  \u2022 ALWAYS wrap every source transcription segment in "
+            "[SEGMENT]...[/SEGMENT] markers with the JSON metadata.\n"
+            "  \u2022 speaker_id: use \u201cspeaker_1\u201d, \u201cspeaker_2\u201d, "
+            "etc. in order of first appearance. Keep the same ID for the same "
+            "speaker throughout the session.\n"
+            "  \u2022 speaker_label: use the single-letter tag like "
+            "\u201cA\u201d, \u201cB\u201d matching the [A], [B] tag system.\n"
+            "  \u2022 text: the EXACT verbatim transcription of what was said "
+            "(filler words, false starts, stutters, all of it).\n"
+            "  \u2022 language: detect the language of this segment "
+            "(ISO 639-1 code like \u201cen\u201d, \u201cfr\u201d, \u201ces\u201d).\n"
+            "  \u2022 confidence: your confidence in the transcription accuracy "
+            "(0.0 to 1.0).\n"
+            "  \u2022 tone: classify the speaker\u2019s tone as one of: "
+            "calm, angry, confused, polite, urgent, emotional, sarcastic, "
+            "humorous, formal, excited, nervous, bored, fearful, thoughtful, "
+            "neutral.\n"
+            "  \u2022 emotion: if distinct from tone, specify the emotion "
+            "(happy, sad, frustrated, anxious, confident, surprised, "
+            "disappointed, hopeful, indifferent, amused).\n"
+            "  \u2022 speech_style: classify as: formal, casual, hesitant, "
+            "fast, slow, deliberate, interrupted, whispered, shouted, "
+            "sing-song, monotone, fragmented.\n"
+            "  \u2022 overlap_status: \u201cnone\u201d if this speaker is the "
+            "only one talking, \u201cpartial\u201d if brief crosstalk, "
+            "\u201coverlapping\u201d if sustained simultaneous speech.\n"
+            "  \u2022 active_speaker: true for this segment\u2019s primary "
+            "speaker, false if this segment captures a secondary/background "
+            "speaker.\n"
+            "  \u2022 Only ONE speaker should be marked as active_speaker=true "
+            "per segment unless there is verified overlapping speech.\n"
+            "  \u2022 The [SEGMENT]...[/SEGMENT] block is in addition to the "
+            "speaker tags in the text field itself. Both must be present.\n"
+            "  \u2022 The plain text portion (outside the markers) should "
+            "contain just the transcription with speaker tag for backward "
+            "compatibility, e.g.: \u201c[A] What the person said\u201d"
         )
         if self._source_lang:
             stt_instruction += (
@@ -512,22 +606,37 @@ class GeminiSession:
         )
         base_instruction += stt_instruction
 
-        # Inject rolling translation memory (recent transcript context).
-        if self._transcript_history:
+        # Inject rolling structured segment context.
+        if self._segment_history:
             total_words = 0
-            context_lines: list[str] = []
+            context_parts: list[str] = []
             # Walk in reverse (newest first) until we hit the word cap.
-            for kind, text in reversed(self._transcript_history):
-                words = len(text.split())
+            for seg in reversed(self._segment_history):
+                seg_text = seg.get("text", "")
+                words = len(seg_text.split())
                 if total_words + words > MAX_HISTORY_WORDS:
                     break
                 total_words += words
+                kind = seg.get("kind", "source")
+                speaker = seg.get("speaker_label", "?")
+                tone = seg.get("tone", "")
+                emotion = seg.get("emotion", "")
+                style = seg.get("speech_style", "")
+                meta = (
+                    f" (tone={tone}, emotion={emotion}, style={style})"
+                    if tone or emotion or style
+                    else ""
+                )
                 prefix = "Speaker said" if kind == "source" else "Translation"
-                context_lines.insert(0, f"  {prefix}: {text}")
-            if context_lines:
+                context_parts.insert(
+                    0,
+                    f"  [{speaker}] {prefix}{meta}: {seg_text}",
+                )
+            if context_parts:
                 base_instruction += (
-                    "\n\nIMPORTANT CONTEXT from the conversation so far:\n"
-                    f"{chr(10).join(context_lines)}"
+                    "\n\nIMPORTANT CONTEXT from the conversation so far "
+                    "(with speaker, tone, emotion, and style metadata):\n"
+                    f"{chr(10).join(context_parts)}"
                 )
 
         # Append glossary terms if defined
@@ -961,25 +1070,34 @@ class GeminiSession:
                                 self._target_lang,
                             )
 
-            # Translated transcript -> text stream for the captions sidebar.
-            # The outputTranscription field may appear at the serverContent level
-            # (as documented in the v1beta proto) or nested inside modelTurn
-            # (observed in some API versions). Check both locations.
+            # --- OUTPUT TRANSCRIPTION (translated text) ---
             ot = sc.get("outputTranscription")
             if not ot and model_turn is not None:
                 ot = model_turn.get("outputTranscription")
             if ot and ot.get("text"):
-                await self._publish_transcript(ot["text"], final=False)
-                # For cinematic faithful mode, parse cast blocks and accumulate segments
+                ot_text = ot["text"]
+                # Parse structured [OUTPUT]...[/OUTPUT] segments
+                output_segments = self._parse_output_segments(ot_text)
+                for seg in output_segments:
+                    self._append_history("target", seg)
+                    self._pending_segments.append(seg)
+                # Publish the plain text version for backward-compatible captions
+                await self._publish_transcript(ot_text, final=False)
+                # For cinematic faithful mode, parse cast blocks
                 if self._content_type == CONTENT_TYPE_CINEMATIC_FAITHFUL:
-                    self._parse_cinematic_output(ot["text"])
+                    self._parse_cinematic_output(ot_text)
 
-            # Source transcription (what the speaker said in their language)
+            # --- SOURCE TRANSCRIPTION (what the speaker said) ---
             it = sc.get("inputTranscription")
             if it and it.get("text"):
-                await self._publish_source_transcript(it["text"], final=False)
-                # Append to rolling memory
-                self._append_history("source", it["text"])
+                it_text = it["text"]
+                # Parse structured [SEGMENT]...[/SEGMENT] segments
+                source_segments = self._parse_source_segments(it_text)
+                for seg in source_segments:
+                    self._append_history("source", seg)
+                    self._pending_segments.append(seg)
+                # Publish the plain text version for backward-compatible captions
+                await self._publish_source_transcript(it_text, final=False)
                 text_chunks += 1
                 if text_chunks in (1, 10) or text_chunks % 50 == 0:
                     logger.info(
@@ -991,27 +1109,147 @@ class GeminiSession:
 
             if sc.get("turnComplete"):
                 await self._publish_transcript("", final=True)
+                # Publish accumulated structured segments as JSON
+                await self._publish_structured_json()
                 # For cinematic faithful mode, publish the structured segment summary
                 if self._content_type == CONTENT_TYPE_CINEMATIC_FAITHFUL:
                     await self._publish_cinematic_json()
 
-    def _append_history(self, kind: str, text: str) -> None:
-        """Add an entry to the rolling transcript memory, capping at limits."""
-        text = text.strip()
-        if not text:
+    def _append_history(self, kind: str, segment: dict) -> None:
+        """Add a structured segment to rolling memory, capping at limits."""
+        if not segment.get("text", "").strip():
             return
-        self._transcript_history.append((kind, text))
+        segment["kind"] = kind  # "source" or "target"
+        self._segment_history.append(segment)
         # Drop oldest entries if over count limit
-        while len(self._transcript_history) > MAX_TRANSCRIPT_HISTORY:
-            self._transcript_history.pop(0)
+        while len(self._segment_history) > MAX_HISTORY_SEGMENTS:
+            self._segment_history.pop(0)
+
+    @staticmethod
+    def _parse_source_segments(text: str) -> list[dict]:
+        """Parse structured [SEGMENT]...[/SEGMENT] blocks from source transcription.
+
+        Returns a list of segment dicts. If no structured segments are found,
+        falls back to creating a simple segment from the raw text.
+        """
+        matches = SEGMENT_RE.findall(text)
+        if not matches:
+            # Fallback: create a basic segment from plain text
+            cleaned = text.strip()
+            if not cleaned:
+                return []
+            return [
+                {
+                    "speaker_id": "speaker_1",
+                    "speaker_label": "",
+                    "text": cleaned,
+                    "language": "",
+                    "confidence": 0.0,
+                    "tone": "",
+                    "emotion": "",
+                    "speech_style": "",
+                    "overlap_status": "none",
+                    "active_speaker": True,
+                }
+            ]
+
+        segments: list[dict] = []
+        for raw in matches:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                seg = json.loads(raw)
+                # Ensure required fields
+                seg.setdefault("speaker_id", "speaker_1")
+                seg.setdefault("speaker_label", "")
+                seg.setdefault("text", "")
+                seg.setdefault("language", "")
+                seg.setdefault("confidence", 0.0)
+                seg.setdefault("tone", "")
+                seg.setdefault("emotion", "")
+                seg.setdefault("speech_style", "")
+                seg.setdefault("overlap_status", "none")
+                seg.setdefault("active_speaker", True)
+                segments.append(seg)
+            except (json.JSONDecodeError, TypeError):
+                logger.debug("failed to parse source segment JSON: %s", raw[:80])
+        return segments
+
+    @staticmethod
+    def _parse_output_segments(text: str) -> list[dict]:
+        """Parse structured [OUTPUT]...[/OUTPUT] blocks from translated output.
+
+        Returns a list of segment dicts. Falls back to raw text if no markers found.
+        """
+        matches = OUTPUT_RE.findall(text)
+        if not matches:
+            cleaned = text.strip()
+            if not cleaned:
+                return []
+            return [
+                {
+                    "speaker_id": "speaker_1",
+                    "speaker_label": "",
+                    "translated_text": cleaned,
+                    "confidence": 0.0,
+                    "nuance_notes": "",
+                }
+            ]
+
+        segments: list[dict] = []
+        for raw in matches:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                seg = json.loads(raw)
+                seg.setdefault("speaker_id", "speaker_1")
+                seg.setdefault("speaker_label", "")
+                seg.setdefault("translated_text", "")
+                seg.setdefault("confidence", 0.0)
+                seg.setdefault("nuance_notes", "")
+                segments.append(seg)
+            except (json.JSONDecodeError, TypeError):
+                logger.debug("failed to parse output segment JSON: %s", raw[:80])
+        return segments
+
+    async def _publish_structured_json(self) -> None:
+        """Publish accumulated source+target segments as structured JSON at turn end."""
+        if not self._pending_segments:
+            return
+
+        payload = {
+            "type": "structured_segments",
+            "conversation_id": self._conversation_id,
+            "target_lang": self._target_lang,
+            "source_identity": self._speaker_identity,
+            "segments": list(self._pending_segments),
+        }
+
+        try:
+            writer = await self._room.local_participant.stream_text(
+                topic="lk.translation",
+                sender_identity=self._speaker_identity,
+                attributes={
+                    "target_lang": self._target_lang,
+                    "source_identity": self._speaker_identity,
+                    "kind": "structured_json",
+                    "final": "true",
+                },
+            )
+            await writer.write(json.dumps(payload, ensure_ascii=False))
+            await writer.aclose()
+        except Exception as exc:
+            logger.debug("structured JSON publish failed: %s", exc)
+
+        # Clear pending segments
+        self._pending_segments.clear()
 
     async def _publish_transcript(self, text: str, *, final: bool) -> None:
         """Best-effort text-stream publish. Frontend filters by attributes."""
         if not text and not final:
             return
-        # Append target transcript to rolling memory (only on complete utterances)
-        if text:
-            self._append_history("target", text)
         try:
             # Send each chunk as its own text-stream message; frontend appends.
             writer = await self._room.local_participant.stream_text(
