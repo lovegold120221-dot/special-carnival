@@ -23,6 +23,8 @@ from livekit import rtc
 from audio import iter_pcm_for_gemini, make_audio_source, push_pcm_to_source
 from config import (
     AVAILABLE_VOICES,
+    CONTENT_TYPE_CINEMATIC_FAITHFUL,
+    CONTENT_TYPE_MOVIE,
     GEMINI_INPUT_SAMPLE_RATE,
     GEMINI_MAX_FAILURES_BEFORE_LONG_BACKOFF,
     GEMINI_MODEL,
@@ -99,6 +101,9 @@ class GeminiSession:
         self._glossary = glossary or []
         self._content_type = content_type
         self._available_voices = available_voices or AVAILABLE_VOICES[:4]
+        # Accumulated segments for cinematic_faithful structured JSON output.
+        self._cinematic_segments: list[dict] = []
+        self._voice_casting_map: dict[str, dict] = {}
 
         participant = self._room.remote_participants.get(self._speaker_identity)
         source_lang = (
@@ -531,10 +536,8 @@ class GeminiSession:
         if dialect_instruction:
             system_instruction_text += dialect_instruction
 
-        # Movie/cinematic translation mode — professional dubbing studio standards.
-        # This builds on top of the base instruction and applies only when content
-        # is flagged as movie/cinematic content.
-        if self._content_type == "movie":
+        # Append content-type-specific instruction block.
+        if self._content_type == CONTENT_TYPE_MOVIE:
             system_instruction_text += (
                 "\n\nMOVIE / CINEMATIC CONTENT \u2014 PROFESSIONAL DUBBING STUDIO "
                 "MODE:\n"
@@ -669,6 +672,139 @@ class GeminiSession:
                 "you ARE the character, saying these words for the first time."
             )
 
+        elif self._content_type == CONTENT_TYPE_CINEMATIC_FAITHFUL:
+            voice_pool_block = self._voice_pool_text()
+            system_instruction_text += (
+                "\n\n"
+                "CINEMATIC FAITHFUL TRANSLATION \u2014 LIVE DIRECTOR MODE:\n"
+                "You are a live cinematic dubbing director. "
+                "The audio you receive is dynamic \u2014 it may come from a "
+                "shared-screen video, a live stream, or an uploaded file. "
+                "Treat the audio as the PRIMARY source of truth. "
+                "The raw transcript (if any) is only a helper reference. "
+                "Listen to the audio carefully and follow these rules:\n\n"
+                "--- PRIMARY RULES ---\n\n"
+                "1. AUDIO SOURCE COMES FIRST:\n"
+                "  \u2022 Use the audio to determine speaker changes, emotion, "
+                "tone, pacing, pauses, intensity, and character identity.\n"
+                "  \u2022 If a raw transcript exists but conflicts with the "
+                "audio, follow the audio.\n"
+                "  \u2022 Do NOT rely only on a written transcript. The "
+                "performance is in the sound.\n\n"
+                "2. TRANSLATE MEANING, NOT JUST WORDS:\n"
+                "  \u2022 The translation MUST carry the same emotional weight "
+                "as the source audio.\n"
+                "  \u2022 Preserve the speaker\u2019s intention, authority, "
+                "fear, sadness, anger, restraint, exhaustion, pride, "
+                "tenderness, or grief.\n"
+                "  \u2022 Avoid flat literal translation when it weakens the "
+                "scene. Use natural phrasing in the target language while "
+                "keeping the original cinematic nuance.\n\n"
+                "3. MIMIC THE NUANCE OF THE AUDIO:\n"
+                "  \u2022 Match the rhythm, silence, hesitation, pauses, "
+                "breath, and dramatic emphasis.\n"
+                "  \u2022 If a line is whispered, solemn, commanding, broken, "
+                "emotional, or reflective, the translated line MUST feel "
+                "the same.\n"
+                "  \u2022 Do NOT modernize, soften, exaggerate, or over-explain "
+                "the dialogue unless the audio clearly supports it.\n\n"
+                "4. ASSIGN SPEAKERS BASED ON CHARACTERS:\n"
+                "  \u2022 Identify every speaker using the AUDIO source.\n"
+                "  \u2022 Use recognizable character names when possible. "
+                "If the character is unknown, use \u201cUnknown Speaker 1\u201d, "
+                "\u201cUnknown Speaker 2\u201d, etc.\n"
+                "  \u2022 Each speaker MUST have a voice profile based on "
+                "the character\u2019s sound and role.\n\n"
+                "5. ONLY ONE SPEAKER ACTIVE AT A TIME:\n"
+                "  \u2022 Every output segment MUST identify exactly one "
+                "active speaker.\n"
+                "  \u2022 Do NOT create multiple simultaneous hosts or "
+                "speakers in one segment.\n"
+                "  \u2022 The speaker label MUST show who is speaking.\n"
+                "  \u2022 All other characters are treated as not speaking "
+                "during that segment.\n\n"
+                "6. SPEAKER TAGS IN OUTPUT:\n"
+                "  \u2022 Prepend the output transcription with "
+                "\u201c[A] \u201d, \u201c[B] \u201d, etc. for each speaker "
+                "in order of first appearance.\n"
+                "  \u2022 If a speaker is identifiable by name from context, "
+                "use their name tag: \u201c[King Aragorn] \u201d.\n"
+                "  \u2022 Re-use existing tags when a speaker resumes \u2014 "
+                "NEVER assign a new letter to the same speaker.\n"
+                "  \u2022 The speaker tag MUST match the voice assigned "
+                "from the voice pool below.\n\n"
+                "--- VOICE CASTING ---\n\n"
+                "7. VOICE-CASTING MAP:\n"
+                "  \u2022 On the FIRST appearance of each new speaker, you "
+                "MUST add a voice-casting JSON block to the output "
+                "transcription. Format:\n"
+                '    <cast>{"speaker":"A","name":"Character Name",'
+                '"role":"protagonist / antagonist / supporting / narrator",'
+                '"gender":"male / female / unclear",'
+                '"age":"young adult / middle-aged / elderly",'
+                '"tone":"deep / bright / raspy / smooth / warm / cold",'
+                '"emotion":"stoic / volatile / warm / haunted / authoritative",'
+                '"pace":"slow / medium / fast / varied",'
+                '"accent":"none / regional / aristocratic / foreign",'
+                '"voice_id":"Zephyr / Kore / Orus / ...",'
+                '"notes":"brief description of vocal character"}</cast>\n"'
+                "  \u2022 The voice_id MUST come from the AVAILABLE VOICE "
+                "POOL below. Assign in order of speaker appearance.\n"
+                "  \u2022 Once cast, that voice_id is PERMANENT for the "
+                "entire session.\n\n"
+                "AVAILABLE VOICE POOL:\n" + voice_pool_block + "\n\n"
+                "--- PERFORMANCE MARKERS ---\n\n"
+                "8. PRESERVE CINEMATIC PERFORMANCE:\n"
+                "  \u2022 Use pause/emotion markers when supported by the "
+                "audio. Valid markers:\n"
+                "    [pause] \u2014 brief hesitation\n"
+                "    [long pause] \u2014 extended silence\n"
+                "    [breath] \u2014 audible inhale or exhale\n"
+                "    [whispered] \u2014 very low volume, intimate\n"
+                "    [strained] \u2014 voice under effort or stress\n"
+                "    [commanding] \u2014 authoritative, forceful\n"
+                "    [softly] \u2014 gentle, tender delivery\n"
+                "    [voice breaking] \u2014 cracking with emotion\n"
+                "    [shouted] \u2014 full-voice cry or yell\n"
+                "    [crosstalk] \u2014 overlapping dialogue\n"
+                "  \u2022 Place markers INLINE in the output transcription "
+                "where the audio supports them. E.g.:\n"
+                '    "[A] I will not [pause] I cannot do this. [breath]"\n'
+                "  \u2022 NEVER insert markers that are not supported by "
+                "the audio.\n\n"
+                "9. OUTPUT TRANSCRIPTION SPEAKER TAGS WITH MARKERS:\n"
+                "  \u2022 Format for each output transcription segment:\n"
+                '    "[A] Translated line. [marker] Next sentence."\n'
+                "  \u2022 Markers go INSIDE the speaker\u2019s block, "
+                "after the speaker tag.\n\n"
+                "--- TRANSLATION STYLE ---\n\n"
+                "10. TRANSLATION STYLE:\n"
+                "  \u2022 Translation mode: cinematic faithful translation.\n"
+                "  \u2022 Keep names, titles, places, and cultural "
+                "references accurate.\n"
+                "  \u2022 Preserve honorifics, rank, and formal/informal "
+                "speech levels where relevant.\n"
+                "  \u2022 Do NOT censor, sanitize, or simplify unless "
+                "required by the target language.\n"
+                "  \u2022 Your audio delivery MUST carry the same dramatic "
+                "weight as the original speaker.\n\n"
+                "--- CHARACTER VOICE EXAMPLES ---\n\n"
+                "When casting voices, follow these archetype guidelines:\n"
+                "  \u2022 Elder ruler / emperor: older male, low register, "
+                "slow pace, weary authority, reflective sadness, "
+                "restrained power.\n"
+                "  \u2022 Soldier / general: mature male, controlled tone, "
+                "grounded delivery, disciplined emotion, strong but not "
+                "theatrical.\n"
+                "  \u2022 Narrator: calm cinematic voice, reflective "
+                "cadence, intimate but epic, slow-to-medium pace.\n"
+                "  \u2022 Warrior / challenger: deep physical voice, "
+                "aggressive energy, heavier breath, direct and forceful "
+                "delivery.\n"
+                "  \u2022 Never assign the same voice profile to every "
+                "speaker unless the audio clearly has only one speaker.\n"
+            )
+
         return {
             "setup": {
                 "model": f"models/{GEMINI_MODEL}",
@@ -797,6 +933,9 @@ class GeminiSession:
                 ot = model_turn.get("outputTranscription")
             if ot and ot.get("text"):
                 await self._publish_transcript(ot["text"], final=False)
+                # For cinematic faithful mode, parse cast blocks and accumulate segments
+                if self._content_type == CONTENT_TYPE_CINEMATIC_FAITHFUL:
+                    self._parse_cinematic_output(ot["text"])
 
             # Source transcription (what the speaker said in their language)
             it = sc.get("inputTranscription")
@@ -815,6 +954,9 @@ class GeminiSession:
 
             if sc.get("turnComplete"):
                 await self._publish_transcript("", final=True)
+                # For cinematic faithful mode, publish the structured segment summary
+                if self._content_type == CONTENT_TYPE_CINEMATIC_FAITHFUL:
+                    await self._publish_cinematic_json()
 
     def _append_history(self, kind: str, text: str) -> None:
         """Add an entry to the rolling transcript memory, capping at limits."""
@@ -849,6 +991,114 @@ class GeminiSession:
             await writer.aclose()
         except Exception as exc:
             logger.debug("text-stream publish failed: %s", exc)
+
+    def _parse_cinematic_output(self, text: str) -> None:
+        """Extract cast blocks and accumulate segments from cinematic faithful output.
+
+        Gemini outputs text like:
+          <cast>{"speaker":"A","name":"Aragorn",...}</cast>
+          [A] I will not [pause] I cannot do this. [breath]
+
+        This method:
+        1. Extracts <cast>...</cast> blocks and stores them in _voice_casting_map.
+        2. Strips cast blocks from the text and accumulates the remaining
+           speaker-tagged segments in _cinematic_segments.
+        """
+        import re
+
+        # Extract all <cast>...</cast> blocks
+        while True:
+            m = re.search(r"<cast>(.*?)</cast>", text, re.DOTALL)
+            if not m:
+                break
+            raw = m.group(1).strip()
+            text = text[: m.start()] + text[m.end() :]
+            try:
+                cast = json.loads(raw)
+                speaker_letter = cast.get("speaker", "")
+                if speaker_letter:
+                    self._voice_casting_map[speaker_letter] = cast
+                    logger.info(
+                        "cinematic cast: %s -> %s (voice=%s)",
+                        speaker_letter,
+                        cast.get("name", "?"),
+                        cast.get("voice_id", "?"),
+                    )
+            except (json.JSONDecodeError, TypeError) as exc:
+                logger.debug("cinematic cast parse error: %s", exc)
+
+        # Accumulate non-empty speaker-tagged segments
+        stripped = text.strip()
+        if stripped:
+            # Detect speaker tag: [A], [King], etc.
+            tag_m = re.match(r"^\[([^\]]+)\]\s*(.*)", stripped, re.DOTALL)
+            if tag_m:
+                speaker_tag = tag_m.group(1)
+                dialogue = tag_m.group(2).strip()
+                self._cinematic_segments.append(
+                    {
+                        "speaker_tag": speaker_tag,
+                        "dialogue": dialogue,
+                        "character_name": (
+                            self._voice_casting_map.get(speaker_tag, {}).get(
+                                "name", speaker_tag
+                            )
+                        ),
+                    }
+                )
+            else:
+                # No speaker tag — accumulate as continuation
+                if self._cinematic_segments:
+                    self._cinematic_segments[-1]["dialogue"] += " " + stripped
+                else:
+                    self._cinematic_segments.append(
+                        {
+                            "speaker_tag": "?",
+                            "dialogue": stripped,
+                            "character_name": "?",
+                        }
+                    )
+
+    async def _publish_cinematic_json(self) -> None:
+        """Publish the accumulated cinematic segments as structured JSON.
+
+        The JSON is published as a text-stream entry with a 'cinematic' kind
+        attribute so the frontend can distinguish it from regular captions.
+        """
+        if not self._cinematic_segments:
+            return
+
+        # Build voice casting array from the map
+        voice_cast = []
+        for letter in sorted(self._voice_casting_map.keys()):
+            voice_cast.append(self._voice_casting_map[letter])
+
+        payload = {
+            "type": "cinematic_segments",
+            "target_lang": self._target_lang,
+            "source_identity": self._speaker_identity,
+            "voice_cast": voice_cast,
+            "segments": list(self._cinematic_segments),
+        }
+
+        try:
+            writer = await self._room.local_participant.stream_text(
+                topic="lk.translation",
+                sender_identity=self._speaker_identity,
+                attributes={
+                    "target_lang": self._target_lang,
+                    "source_identity": self._speaker_identity,
+                    "kind": "cinematic_json",
+                    "final": "true",
+                },
+            )
+            await writer.write(json.dumps(payload, ensure_ascii=False))
+            await writer.aclose()
+        except Exception as exc:
+            logger.debug("cinematic JSON publish failed: %s", exc)
+
+        # Clear accumulated segments after publishing
+        self._cinematic_segments.clear()
 
     async def _publish_source_transcript(self, text: str, *, final: bool) -> None:
         """Publish source transcription (what the speaker said in their language)."""

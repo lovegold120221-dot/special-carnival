@@ -1352,6 +1352,14 @@ body {
 .orbit-movie-toggle.active svg {
   color: var(--accent, #6366f1);
 }
+/* Cinematic Faithful mode — distinct gold accent */
+.orbit-movie-toggle.faithful {
+  background: rgba(234, 179, 8, 0.12);
+  border-color: rgba(234, 179, 8, 0.35);
+}
+.orbit-movie-toggle.faithful svg {
+  color: #eab308;
+}
 
 /* Mobile topbar: hidden on desktop by default, shown at mobile breakpoint */
 .orbit-topbar-mobile {

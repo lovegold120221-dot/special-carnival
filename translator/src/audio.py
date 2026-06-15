@@ -59,6 +59,7 @@ class MultiplexedAudioStream:
         if self._task:
             self._task.cancel()
             import contextlib
+
             with contextlib.suppress(asyncio.CancelledError):
                 await self._task
 

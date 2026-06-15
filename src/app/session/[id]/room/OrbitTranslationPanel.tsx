@@ -264,7 +264,7 @@ export default function OrbitTranslationPanel({
         <div ref={sourceBodyRef} className="otp-scroll-area otp-scroll-area--source">
           {sourceEntries.length === 0 ? (
             <div className="captions-empty">
-              No transcriptions yet. Original speech will appear here.
+              
             </div>
           ) : (
             sourceEntries.map((entry) => (
@@ -286,7 +286,7 @@ export default function OrbitTranslationPanel({
         <div ref={translatedBodyRef} className="otp-scroll-area otp-scroll-area--translated">
           {translatedEntries.length === 0 ? (
             <div className="captions-empty">
-              No translations yet. Translated speech will appear here.
+              
             </div>
           ) : (
             translatedEntries.map((entry) => (

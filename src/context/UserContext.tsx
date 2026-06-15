@@ -26,7 +26,7 @@ export type UserProfile = {
   camera_off_on_join?: boolean;
   video_background?: string; // "none" | "blur" | "color-#hex" | "custom-{name}"
   // Translation
-  content_type?: "normal" | "movie";
+  content_type?: "normal" | "movie" | "cinematic_faithful";
   show_captions?: boolean;
   mute_original_audio?: boolean;
   translate_audio_playback?: boolean;

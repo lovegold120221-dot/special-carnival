@@ -37,7 +37,7 @@ export default function SettingsPage() {
   const [name, setName] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [defaultLanguage, setDefaultLanguage] = useState("en");
-  const [contentType, setContentType] = useState<"normal" | "movie">("normal");
+  const [contentType, setContentType] = useState<"normal" | "movie" | "cinematic_faithful">("normal");
   const [voice, setVoice] = useState("male1");
   const [autoJoinAudio, setAutoJoinAudio] = useState(false);
   const [noiseSuppression, setNoiseSuppression] = useState(true);
@@ -317,11 +317,12 @@ export default function SettingsPage() {
                   <select
                     className="settings-select"
                     value={contentType}
-                    onChange={(e) => { setContentType(e.target.value as "normal" | "movie"); markDirty(); }}
+                    onChange={(e) => { setContentType(e.target.value as "normal" | "movie" | "cinematic_faithful"); markDirty(); }}
                     aria-label="Shared Screen Content Type"
                   >
                     <option value="normal">Normal Presentation</option>
                     <option value="movie">Movie/Cinematic</option>
+                    <option value="cinematic_faithful">Cinematic Faithful — Live Director</option>
                   </select>
                 </div>
 

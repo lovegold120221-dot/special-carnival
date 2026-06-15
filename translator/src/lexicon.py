@@ -76,8 +76,9 @@ DIALECT_LEXICONS: dict[str, dict[str, str]] = {
         "you (plural)": "bin",
         "and/as/like": "mba",
         "question marker": "yi à? (placed at end of sentence)",
-    }
+    },
 }
+
 
 def get_lexicon_instructions(lang_code: str) -> str:
     """Returns a formatted instruction string for the given language code."""
@@ -103,7 +104,10 @@ def get_lexicon_instructions(lang_code: str) -> str:
             "- Word Order: Maintain a strict S-V-O structure unless emphasizing a specific noun."
         )
 
-    lines = [f'  - "{concept}" should be translated as "{term}"' for concept, term in lexicon.items()]
+    lines = [
+        f'  - "{concept}" should be translated as "{term}"'
+        for concept, term in lexicon.items()
+    ]
     return (
         "\n\nCRITICAL FLUENCY DATA: Use the following specific lexicon and syntax rules for this dialect. "
         "This data MUST take precedence to ensure the output sounds like a native human speaker:\n"

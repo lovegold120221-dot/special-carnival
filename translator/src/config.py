@@ -34,6 +34,11 @@ PARTICIPANT_LANG_ATTR = "lang"
 # Participant attribute key for glossary (JSON array of {source, translation}).
 GLOSSARY_ATTR = "orbit_glossary"
 
+# Content-type constants for participant's orbit_content_type attribute.
+CONTENT_TYPE_NORMAL = "normal"
+CONTENT_TYPE_MOVIE = "movie"
+CONTENT_TYPE_CINEMATIC_FAITHFUL = "cinematic_faithful"
+
 # Sentinel meaning "no translation, native passthrough."
 NATIVE_LANG = "none"
 

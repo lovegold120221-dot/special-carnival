@@ -41,7 +41,7 @@ export default function InCall({
   const [speakerMuted, setSpeakerMuted] = useState(false);
   const [headerCopied, setHeaderCopied] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
-  const [contentType, setContentType] = useState<"normal" | "movie">(
+  const [contentType, setContentType] = useState<"normal" | "movie" | "cinematic_faithful">(
     profile?.content_type || "normal"
   );
   const router = useRouter();
@@ -196,21 +196,24 @@ export default function InCall({
                 Translation: {langInfo?.name || lang}
               </span>
               <label
-                className={`orbit-movie-toggle${contentType === "movie" ? " active" : ""}`}
-                title={contentType === "movie" ? "Movie dubbing mode ON" : "Movie dubbing mode OFF — click when sharing a film"}
+                className={`orbit-movie-toggle${contentType !== "normal" ? " active" : ""}${contentType === "cinematic_faithful" ? " faithful" : ""}`}
+                title={
+                  contentType === "normal"
+                    ? "Content mode: Normal — click for Movie"
+                    : contentType === "movie"
+                    ? "Content mode: Movie dubbing — click for Cinematic Faithful"
+                    : "Content mode: Cinematic Faithful — click to reset to Normal"
+                }
+                onClick={() => {
+                  const cycle: Array<"normal" | "movie" | "cinematic_faithful"> = ["normal", "movie", "cinematic_faithful"];
+                  const idx = cycle.indexOf(contentType);
+                  const next = cycle[(idx + 1) % cycle.length];
+                  setContentType(next);
+                  localParticipant?.setAttributes({ orbit_content_type: next });
+                }}
               >
-                <input
-                  type="checkbox"
-                  checked={contentType === "movie"}
-                  onChange={(e) => {
-                    const next = e.target.checked ? "movie" : "normal";
-                    setContentType(next);
-                    localParticipant?.setAttributes({ orbit_content_type: next });
-                  }}
-                  aria-label="Toggle movie dubbing mode"
-                />
                 <FilmIcon />
-                <span>Movie</span>
+                <span>{contentType === "normal" ? "Normal" : contentType === "movie" ? "Movie" : "Faithful"}</span>
               </label>
               <button
                 className="orbit-view-btn"

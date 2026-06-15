@@ -18,6 +18,7 @@
 - **Cinematic Translation Quality (all content)** — Natural idiomatic dubbing flow, dramatic pacing aligned with emotional arc, cultural adaptation of idioms/jokes/references, native-native feel not interpreter flatness
 - **Movie mode reworked** — No longer duplicates the three sections; now additive: character labeling for subtitles, lip-sync awareness, genre-aware tone (comedy/drama/action/romance)
 - **Verbatim source transcription** — STT instruction rewritten: capture filler words ("um", "uh", "like", "you know"), false starts, self-corrections, repetitions, stutters, interjections, exact word choice (slang, "ain't", "gonna"), no punctuation-imposed grammar, forensic-level faithful record
+- **Default speaker muted** — Set speaker state to muted by default when a user joins a meeting room
 
 ### In Progress
 - (none)
@@ -1742,3 +1743,33 @@ Agent starts, connects to LiveKit Cloud (`wss://eburon-meet-15gd8gwg.livekit.clo
 ### Next step
 - Run migration `006_chat_attachments.sql` in Supabase SQL Editor to create the storage bucket and columns
 - Test end-to-end: join meeting → chat → attach file → verify upload + thumbnail + download works
+
+---
+
+## TASK-20260615-152000: Set default speaker state to muted
+
+### START RECORD
+- STATUS: COMPLETED
+- Start time: 2026-06-15T15:18:00Z
+- User request: set the speaker besidethe video on the buttom navbar at the left to be muted as default
+- Preservation constraints: Preserve existing ControlBar layout, icon state mappings, and routing behavior.
+- Success criteria:
+  - Speaker button (controlling remote audio) in the bottom control bar next to video starts in muted state by default when a user enters a room.
+
+### WHAT WAS DONE
+- **Updated default state** in `src/app/session/[id]/room/InCall.tsx`:
+  - Changed `const [speakerMuted, setSpeakerMuted] = useState(false);` to `const [speakerMuted, setSpeakerMuted] = useState(true);`.
+- **Verified state flow**:
+  - `speakerMuted` is passed to the translation routing hook `useTranslationRouting` and the `ControlBar` component.
+  - On mount, `speakerMuted` is true, so the `ControlBar` rendering highlights the Speaker button as active/muted and displays the `SpeakerOffIcon` correctly.
+  - The user can click to unmute / toggle it as usual.
+
+### FINAL REPORT
+- STATUS: COMPLETED
+- End time: 2026-06-15T15:20:00Z
+- Files changed:
+  - `src/app/session/[id]/room/InCall.tsx`
+- Validation performed:
+  - Verified code compiles successfully.
+  - Verified default state value change.
+
