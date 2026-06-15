@@ -331,6 +331,10 @@ export default function ControlBar({
           name: "screen",
           source: Track.Source.ScreenShare,
         });
+        // Clean up when user stops sharing via browser UI
+        videoTrack.addEventListener("ended", () => {
+          stopShareScreen();
+        });
       }
 
       // Publish audio track if captured
@@ -341,16 +345,13 @@ export default function ControlBar({
           source: Track.Source.ScreenShareAudio,
         });
       }
-
-      // Clean up when user stops sharing via browser UI
-      videoTrack?.addEventListener("ended", () => {
-        stopShareScreen();
-      });
-
-      setShowShareDialog(false);
     } catch (e: unknown) {
-      setShareError(`Failed to start screen share: ${getShareErrorMessage(e)}`);
+      // Don't show error for user cancelled — just close silently
+      if (!(e instanceof DOMException && (e.name === "AbortError" || e.name === "NotAllowedError"))) {
+        setShareError(`Failed to start screen share: ${getShareErrorMessage(e)}`);
+      }
     } finally {
+      setShowShareDialog(false);
       setShareStarting(false);
     }
   }
