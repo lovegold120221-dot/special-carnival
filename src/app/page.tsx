@@ -39,7 +39,6 @@ export default function Home() {
   const [clockHour, setClockHour] = useState(12);
   const [clockMinute, setClockMinute] = useState(0);
   const [clockAmPm, setClockAmPm] = useState<"AM" | "PM">("PM");
-  const [clockMinuteMode, setClockMinuteMode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [reminderToast, setReminderToast] = useState(false);
   const [scheduledMeetings, setScheduledMeetings] = useState<ScheduledMeeting[]>([]);
@@ -131,7 +130,6 @@ export default function Home() {
     h = h % 12 || 12;
     setClockHour(h);
     setClockMinute(Math.round(m / 5) * 5);
-    setClockMinuteMode(false);
   }
 
   function buildTimeFromClock(dateStr: string, hour: number, minute: number, ampm: "AM" | "PM"): string {
@@ -351,27 +349,22 @@ export default function Home() {
 
                 <div className="entry-field">
                   <span>Time</span>
-                  <ClockPicker
+                  <TimeSpinner
                     hour={clockHour}
                     minute={clockMinute}
                     ampm={clockAmPm}
-                    minuteMode={clockMinuteMode}
                     onHourChange={(h) => {
-                      const newHour = h;
-                      setClockHour(newHour);
-                      setClockMinuteMode(true);
+                      setClockHour(h);
                       if (scheduleTime) {
                         const date = scheduleTime.slice(0, 10);
-                        setScheduleTime(buildTimeFromClock(date, newHour, clockMinute, clockAmPm));
+                        setScheduleTime(buildTimeFromClock(date, h, clockMinute, clockAmPm));
                       }
                     }}
                     onMinuteChange={(m) => {
-                      const newMin = m;
-                      setClockMinute(newMin);
-                      setClockMinuteMode(false);
+                      setClockMinute(m);
                       if (scheduleTime) {
                         const date = scheduleTime.slice(0, 10);
-                        setScheduleTime(buildTimeFromClock(date, clockHour, newMin, clockAmPm));
+                        setScheduleTime(buildTimeFromClock(date, clockHour, m, clockAmPm));
                       }
                     }}
                     onAmPmToggle={() => {
@@ -685,13 +678,12 @@ function CalendarPlusIcon() {
   );
 }
 
-// ── Clock Picker Component ─────────────────────────────────────────────
+// ── Digital Time Spinner ───────────────────────────────────────────────
 
-function ClockPicker({
+function TimeSpinner({
   hour,
   minute,
   ampm,
-  minuteMode,
   onHourChange,
   onMinuteChange,
   onAmPmToggle,
@@ -699,82 +691,107 @@ function ClockPicker({
   hour: number;
   minute: number;
   ampm: "AM" | "PM";
-  minuteMode: boolean;
   onHourChange: (h: number) => void;
   onMinuteChange: (m: number) => void;
   onAmPmToggle: () => void;
 }) {
-  const hours = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-  const minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
-
-  const displayHour = hour;
   const displayMin = String(minute).padStart(2, "0");
 
+  const incHour = () => {
+    let h = hour + 1;
+    if (h > 12) h = 1;
+    onHourChange(h);
+  };
+
+  const decHour = () => {
+    let h = hour - 1;
+    if (h < 1) h = 12;
+    onHourChange(h);
+  };
+
+  const incMin = () => {
+    let m = minute + 5;
+    if (m >= 60) m = 0;
+    onMinuteChange(m);
+  };
+
+  const decMin = () => {
+    let m = minute - 5;
+    if (m < 0) m = 55;
+    onMinuteChange(m);
+  };
+
   return (
-    <div className="clock-picker">
-      <div className="clock-face">
-        {/* Center dot */}
-        <div className="clock-center" />
-
-        {/* Hour markers */}
-        {hours.map((h, i) => {
-          const angle = (i * 30 - 90) * (Math.PI / 180);
-          const radius = 38;
-          const cx = 50 + radius * Math.cos(angle);
-          const cy = 50 + radius * Math.sin(angle);
-          const selected = !minuteMode && h === displayHour;
-          return (
-            <button
-              key={`h-${h}`}
-              type="button"
-              className={`clock-marker${selected ? " clock-marker--selected" : ""}`}
-              style={{ left: `${cx}%`, top: `${cy}%` }}
-              onClick={() => onHourChange(h)}
-              aria-label={`${h} ${ampm.toLowerCase()}`}
-            >
-              {h}
-            </button>
-          );
-        })}
-
-        {/* Minute markers */}
-        {minutes.map((m, i) => {
-          const angle = (i * 30 - 90) * (Math.PI / 180);
-          const radius = 38;
-          const cx = 50 + radius * Math.cos(angle);
-          const cy = 50 + radius * Math.sin(angle);
-          const selected = minuteMode && m === minute;
-          return (
-            <button
-              key={`m-${m}`}
-              type="button"
-              className={`clock-marker clock-marker--minute${selected ? " clock-marker--selected" : ""}`}
-              style={{ left: `${cx}%`, top: `${cy}%` }}
-              onClick={() => onMinuteChange(m)}
-              aria-label={`${m} minutes`}
-            >
-              {String(m).padStart(2, "0")}
-            </button>
-          );
-        })}
+    <div className="time-spinner">
+      {/* Hour column */}
+      <div className="time-spinner-col">
+        <button
+          type="button"
+          className="time-spinner-arrow"
+          onClick={incHour}
+          aria-label="Increase hour"
+        >
+          <CaretUpIcon />
+        </button>
+        <span className="time-spinner-value">{hour}</span>
+        <button
+          type="button"
+          className="time-spinner-arrow"
+          onClick={decHour}
+          aria-label="Decrease hour"
+        >
+          <CaretDownIcon />
+        </button>
       </div>
 
-      <div className="clock-info">
-        <span className="clock-display">
-          {displayHour}:{displayMin}
-          <button
-            type="button"
-            className={`clock-ampm-toggle${ampm === "PM" ? " clock-ampm-toggle--active" : ""}`}
-            onClick={onAmPmToggle}
-            aria-label={`Switch to ${ampm === "AM" ? "PM" : "AM"}`}
-          >
-            {ampm}
-          </button>
-        </span>
-        <span className="clock-hint">
-          {minuteMode ? "Select minutes" : "Select hour"}
-        </span>
+      <span className="time-spinner-sep">:</span>
+
+      {/* Minute column */}
+      <div className="time-spinner-col">
+        <button
+          type="button"
+          className="time-spinner-arrow"
+          onClick={incMin}
+          aria-label="Increase minutes"
+        >
+          <CaretUpIcon />
+        </button>
+        <span className="time-spinner-value">{displayMin}</span>
+        <button
+          type="button"
+          className="time-spinner-arrow"
+          onClick={decMin}
+          aria-label="Decrease minutes"
+        >
+          <CaretDownIcon />
+        </button>
       </div>
+
+      {/* AM/PM toggle */}
+      <button
+        type="button"
+        className={`time-spinner-ampm${ampm === "PM" ? " time-spinner-ampm--active" : ""}`}
+        onClick={onAmPmToggle}
+        aria-label={`Switch to ${ampm === "AM" ? "PM" : "AM"}`}
+      >
+        {ampm}
+      </button>
     </div>
+  );
+}
+
+function CaretUpIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 15l-6-6-6 6" />
+    </svg>
+  );
+}
+
+function CaretDownIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
   );
 }
