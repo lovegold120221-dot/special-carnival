@@ -1,3 +1,14 @@
 .pnpm-store
 node_modules
 .git
+.next
+dist-electron
+out
+translator/.venv
+translator/__pycache__
+*.dmg
+*.zip
+*.exe
+*.AppImage
+*.deb
+*.apk
