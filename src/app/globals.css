@@ -3297,6 +3297,125 @@ html[data-theme="dark"] .auth-logo-bg {
   color: #9aa4b5;
 }
 
+/* ——— Time dropdowns ——— */
+
+.time-dropdown-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.time-dropdowns {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.time-dropdown {
+  appearance: auto;
+  -webkit-appearance: auto;
+  min-width: 72px;
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid #cfd7e6;
+  border-radius: 8px;
+  background: #ffffff;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: #273044;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.12s ease;
+}
+
+.time-dropdown:hover {
+  border-color: #aeb9cb;
+}
+
+.time-dropdown:focus-visible {
+  border-color: #2f6fed;
+  box-shadow: 0 0 0 2px rgba(47, 111, 237, 0.2);
+}
+
+.time-dropdown-sep {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: #697386;
+  line-height: 1;
+  user-select: none;
+}
+
+.time-ampm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid #cfd7e6;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #697386;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  -webkit-appearance: none;
+  appearance: none;
+  letter-spacing: 0.02em;
+}
+
+.time-ampm-btn:hover {
+  border-color: #2f6fed;
+  color: #2f6fed;
+}
+
+.time-ampm-btn:focus-visible {
+  border-color: #2f6fed;
+  box-shadow: 0 0 0 2px rgba(47, 111, 237, 0.2);
+}
+
+.time-ampm-btn--active {
+  background: #2f6fed;
+  border-color: #2f6fed;
+  color: #ffffff;
+}
+
+/* Dark theme */
+.time-dropdown {
+  border-color: var(--border);
+  background: var(--surface-soft);
+  color: var(--fg);
+}
+
+.time-dropdown:hover {
+  border-color: var(--accent-border);
+}
+
+.time-dropdown-sep {
+  color: var(--fg-tertiary);
+}
+
+.time-ampm-btn {
+  border-color: var(--border);
+  background: var(--surface-soft);
+  color: var(--fg-tertiary);
+}
+
+.time-ampm-btn:hover {
+  border-color: var(--accent-border);
+  color: var(--fg);
+}
+
+.time-ampm-btn--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
 .entry-primary {
   min-height: 48px;
   display: inline-flex;

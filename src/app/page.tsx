@@ -35,6 +35,9 @@ export default function Home() {
   const [joinError, setJoinError] = useState("");
   const [scheduleTitle, setScheduleTitle] = useState("Orbit Meeting");
   const [scheduleTime, setScheduleTime] = useState("");
+  const [clockHour, setClockHour] = useState(12);
+  const [clockMinute, setClockMinute] = useState(0);
+  const [clockAmPm, setClockAmPm] = useState<"AM" | "PM">("PM");
   const [scheduledLink, setScheduledLink] = useState("");
   const [copied, setCopied] = useState(false);
   const [reminderToast, setReminderToast] = useState(false);
@@ -122,7 +125,12 @@ export default function Home() {
     setActivePanel("schedule");
     setCopied(false);
     if (!scheduleTime) {
-      setScheduleTime(getDefaultScheduleTime());
+      const t = getDefaultScheduleTime();
+      setScheduleTime(t);
+      const parts = syncClockFromTime(t);
+      setClockHour(parts.hour);
+      setClockMinute(parts.minute);
+      setClockAmPm(parts.ampm);
     }
     if (!scheduledLink) {
       setScheduledLink(`${window.location.origin}/session/${crypto.randomUUID()}`);
@@ -304,13 +312,77 @@ export default function Home() {
                   />
                 </label>
                 <label className="entry-field">
-                  <span>Date and time</span>
+                  <span>Date</span>
                   <input
-                    type="datetime-local"
-                    value={scheduleTime}
-                    onChange={(event) => setScheduleTime(event.target.value)}
+                    type="date"
+                    value={scheduleTime ? scheduleTime.slice(0, 10) : ""}
+                    onChange={(event) => {
+                      const date = event.target.value;
+                      if (date) {
+                        setScheduleTime(buildTimeFromClock(date, clockHour, clockMinute, clockAmPm));
+                      }
+                    }}
                   />
                 </label>
+
+                <div className="entry-field time-dropdown-row">
+                  <span>Hour</span>
+                  <div className="time-dropdowns">
+                    <select
+                      className="time-dropdown"
+                      value={clockHour}
+                      onChange={(e) => {
+                        const h = Number(e.target.value);
+                        setClockHour(h);
+                        if (scheduleTime) {
+                          const date = scheduleTime.slice(0, 10);
+                          setScheduleTime(buildTimeFromClock(date, h, clockMinute, clockAmPm));
+                        }
+                      }}
+                      aria-label="Hour"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                        <option key={h} value={h}>{String(h).padStart(2, "0")}</option>
+                      ))}
+                    </select>
+
+                    <span className="time-dropdown-sep">:</span>
+
+                    <select
+                      className="time-dropdown"
+                      value={clockMinute}
+                      onChange={(e) => {
+                        const m = Number(e.target.value);
+                        setClockMinute(m);
+                        if (scheduleTime) {
+                          const date = scheduleTime.slice(0, 10);
+                          setScheduleTime(buildTimeFromClock(date, clockHour, m, clockAmPm));
+                        }
+                      }}
+                      aria-label="Minute"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i * 5).map((m) => (
+                        <option key={m} value={m}>{String(m).padStart(2, "0")}</option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      className={`time-ampm-btn${clockAmPm === "PM" ? " time-ampm-btn--active" : ""}`}
+                      onClick={() => {
+                        const newAmPm = clockAmPm === "AM" ? "PM" : "AM";
+                        setClockAmPm(newAmPm);
+                        if (scheduleTime) {
+                          const date = scheduleTime.slice(0, 10);
+                          setScheduleTime(buildTimeFromClock(date, clockHour, clockMinute, newAmPm));
+                        }
+                      }}
+                      aria-label={`Switch to ${clockAmPm === "AM" ? "PM" : "AM"}`}
+                    >
+                      {clockAmPm}
+                    </button>
+                  </div>
+                </div>
                 <div className="schedule-link">
                   <span>{scheduledLink}</span>
                 </div>
@@ -477,6 +549,29 @@ function getDefaultScheduleTime() {
   const offset = date.getTimezoneOffset();
   const localDate = new Date(date.getTime() - offset * 60 * 1000);
   return localDate.toISOString().slice(0, 16);
+}
+
+/** Build an ISO datetime-local string from date + clock parts. */
+function buildTimeFromClock(dateStr: string, hour: number, minute: number, ampm: "AM" | "PM") {
+  let h = hour;
+  if (ampm === "PM" && hour !== 12) h += 12;
+  if (ampm === "AM" && hour === 12) h = 0;
+  const mm = String(minute).padStart(2, "0");
+  const hh = String(h).padStart(2, "0");
+  return `${dateStr}T${hh}:${mm}`;
+}
+
+/** Parse a datetime-local string back into clock parts. */
+function syncClockFromTime(timeStr: string) {
+  if (!timeStr) return { hour: 12, minute: 0, ampm: "PM" as const };
+  const d = new Date(timeStr);
+  if (Number.isNaN(d.getTime())) return { hour: 12, minute: 0, ampm: "PM" as const };
+  const h = d.getHours();
+  const m = d.getMinutes();
+  const ampm = h >= 12 ? ("PM" as const) : ("AM" as const);
+  let hour = h % 12;
+  if (hour === 0) hour = 12;
+  return { hour, minute: Math.round(m / 5) * 5, ampm };
 }
 
 function formatScheduleTime(value: string) {
