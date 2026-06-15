@@ -173,7 +173,7 @@ export default function InCall({
 
   const langInfo = getLanguageByCode(lang);
 
-  const screenShareTracks = useTracks([Track.Source.ScreenShare]);
+  const screenShareTracks = useTracks([Track.Source.ScreenShare], { onlySubscribed: false });
   const hasScreenShare = screenShareTracks.length > 0;
 
 

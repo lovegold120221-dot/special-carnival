@@ -66,7 +66,7 @@ export default function ScreenShareView({
           }
         }
       }
-      setActiveShare((prev) => prev === null ? null : null);
+      setActiveShare(null);
     };
 
     sync();

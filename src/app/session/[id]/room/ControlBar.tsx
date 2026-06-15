@@ -309,11 +309,6 @@ export default function ControlBar({
     try {
       await localParticipant.setScreenShareEnabled(true, {
         audio: shareWithAudio,
-        video: true,
-        systemAudio: shareWithAudio ? "include" : "exclude",
-        surfaceSwitching: "include",
-        selfBrowserSurface: "include",
-        contentHint: "detail",
       });
       setShowShareDialog(false);
     } catch (e: unknown) {
